@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 
 public class ManagementContainer {
 
-    private static final Logger LOGGER = Logger.getLogger(DENM.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ManagementContainer.class.getName());
 
     private JSONObject jsonManagementContainer = new JSONObject();
     private final ActionId actionId;
