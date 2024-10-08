@@ -30,6 +30,18 @@ public class StationDataContainer {
     private final OriginatingRsuContainer originatingRsuContainer;
 
     public StationDataContainer(
+            final OriginatingVehicleContainer originatingVehicleContainer
+    ) {
+        this(originatingVehicleContainer, null);
+    }
+
+    public StationDataContainer(
+            final OriginatingRsuContainer originatingRsuContainer
+    ) {
+        this(null, originatingRsuContainer);
+    }
+
+    private StationDataContainer(
             final OriginatingVehicleContainer originatingVehicleContainer,
             final OriginatingRsuContainer originatingRsuContainer
     ) {

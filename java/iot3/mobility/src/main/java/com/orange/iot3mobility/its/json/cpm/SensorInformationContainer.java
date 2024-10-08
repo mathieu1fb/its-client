@@ -11,6 +11,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,10 +24,10 @@ public class SensorInformationContainer {
     /**
      * List of sensors and their information.
      */
-    private final ArrayList<SensorInformation> sensorInformationList;
+    private final List<SensorInformation> sensorInformationList;
 
     public SensorInformationContainer(
-            final ArrayList<SensorInformation> sensorInformationList
+            final List<SensorInformation> sensorInformationList
     ) {
         this.sensorInformationList = sensorInformationList;
 
@@ -43,11 +44,11 @@ public class SensorInformationContainer {
         return jsonArray;
     }
 
-    public ArrayList<SensorInformation> getSensorInformationList() {
+    public List<SensorInformation> getSensorInformationList() {
         return sensorInformationList;
     }
 
-    public ArrayList<String> getSensorTypeList() {
+    public List<String> getSensorTypeList() {
         ArrayList<String> sensorTypeList = new ArrayList<>();
         for(SensorInformation sensorInformation: sensorInformationList) {
             sensorTypeList.add(sensorInformation.getSensorType());

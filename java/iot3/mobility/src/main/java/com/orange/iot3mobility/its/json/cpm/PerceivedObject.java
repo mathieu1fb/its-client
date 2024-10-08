@@ -14,6 +14,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -408,7 +409,7 @@ public class PerceivedObject {
     /**
      * List of sensor-IDs which provided the measurement data.
      */
-    private final ArrayList<Integer> sensorIdList;
+    private final List<Integer> sensorIdList;
 
     /**
      * Indicated the dynamic capabilities of a detected object.
@@ -427,7 +428,7 @@ public class PerceivedObject {
      * Provides the classification of the described object.
      * Multi-dimensional classification may be provided.
      */
-    private final ArrayList<ClassificationItem> classification;
+    private final List<ClassificationItem> classification;
 
     //matchedPosition not implemented
 
@@ -462,9 +463,9 @@ public class PerceivedObject {
             final int verticalObjectDimension,
             final int objectRefPoint,
             final int objectAge,
-            final ArrayList<Integer> sensorIdList,
+            final List<Integer> sensorIdList,
             final int dynamicStatus,
-            final ArrayList<ClassificationItem> classification,
+            final List<ClassificationItem> classification,
             final PerceivedObjectConfidence confidence
     ) throws IllegalArgumentException {
         if(objectId == UNKNOWN && CPM.isStrictMode()) {
@@ -835,7 +836,7 @@ public class PerceivedObject {
         return objectAge;
     }
 
-    public ArrayList<Integer> getSensorIdList() {
+    public List<Integer> getSensorIdList() {
         return sensorIdList;
     }
 
@@ -843,7 +844,7 @@ public class PerceivedObject {
         return dynamicStatus;
     }
 
-    public ArrayList<ClassificationItem> getClassification() {
+    public List<ClassificationItem> getClassification() {
         return classification;
     }
 

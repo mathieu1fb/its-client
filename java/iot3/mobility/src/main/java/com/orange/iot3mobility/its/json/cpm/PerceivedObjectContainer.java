@@ -11,6 +11,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,10 +24,10 @@ public class PerceivedObjectContainer {
     /**
      * List of perceived objects.
      */
-    private final ArrayList<PerceivedObject> perceivedObjects;
+    private final List<PerceivedObject> perceivedObjects;
 
     public PerceivedObjectContainer(
-            final ArrayList<PerceivedObject> perceivedObjects
+            final List<PerceivedObject> perceivedObjects
     ) {
         this.perceivedObjects = perceivedObjects;
 
@@ -43,7 +44,7 @@ public class PerceivedObjectContainer {
         return jsonArray;
     }
 
-    public ArrayList<PerceivedObject> getPerceivedObjects() {
+    public List<PerceivedObject> getPerceivedObjects() {
         return perceivedObjects;
     }
 
