@@ -12,7 +12,12 @@ import static com.orange.iot3mobility.its.json.JsonUtil.UNKNOWN;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class PerceivedObjectConfidence {
+
+    private static final Logger LOGGER = Logger.getLogger(PerceivedObjectConfidence.class.getName());
 
     private final JSONObject json = new JSONObject();
 
@@ -532,7 +537,7 @@ public class PerceivedObjectConfidence {
                 json.put(JsonCpmKey.ObjectLanePosition.LONGITUDINAL_LANE_POSITION.key(), longitudinalLanePosition);
             json.put(JsonCpmKey.PerceivedObjectContainer.OBJECT.key(), object);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "CPM PerceivedObjectConfidence JSON build error", "Error: " + e);
         }
     }
 
@@ -642,7 +647,7 @@ public class PerceivedObjectConfidence {
     }
 
     public static PerceivedObjectConfidence jsonParser(JSONObject json) {
-        if(json == null || json.length() == 0) return null;
+        if(json == null || json.isEmpty()) return null;
         try {
             int xDistance = json.getInt(JsonCpmKey.ObjectDistance.X_DISTANCE.key());
             int yDistance = json.getInt(JsonCpmKey.ObjectDistance.Y_DISTANCE.key());
@@ -693,7 +698,7 @@ public class PerceivedObjectConfidence {
                     longitudinalLanePosition,
                     object);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "CPM PerceivedObjectConfidence JSON parsing error", "Error: " + e);
         }
         return null;
     }

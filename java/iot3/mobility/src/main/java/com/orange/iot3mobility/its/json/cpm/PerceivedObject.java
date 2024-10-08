@@ -14,8 +14,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class PerceivedObject {
+
+    private static final Logger LOGGER = Logger.getLogger(PerceivedObject.class.getName());
 
     private final JSONObject json = new JSONObject();
 
@@ -688,7 +692,7 @@ public class PerceivedObject {
             if(objectRefPoint != UNKNOWN)
                 json.put(JsonCpmKey.PerceivedObjectContainer.OBJECT_REF_POINT.key(), objectRefPoint);
             json.put(JsonCpmKey.PerceivedObjectContainer.OBJECT_AGE.key(), objectAge);
-            if(sensorIdList != null && sensorIdList.size() > 0) {
+            if(sensorIdList != null && !sensorIdList.isEmpty()) {
                 JSONArray jsonSensorIdList = new JSONArray();
                 for(int sensorId: sensorIdList) {
                     jsonSensorIdList.put(sensorId);
@@ -697,17 +701,17 @@ public class PerceivedObject {
             }
             if(dynamicStatus != UNKNOWN)
                 json.put(JsonCpmKey.PerceivedObjectContainer.DYNAMIC_STATUS.key(), dynamicStatus);
-            if(classification != null && classification.size() > 0) {
+            if(classification != null && !classification.isEmpty()) {
                 JSONArray jsonClassification = new JSONArray();
                 for(ClassificationItem classificationItem: classification) {
                     if(classificationItem != null) jsonClassification.put(classificationItem.getJson());
                 }
-                if(jsonClassification.length() > 0)
+                if(!jsonClassification.isEmpty())
                     json.put(JsonCpmKey.PerceivedObjectContainer.CLASSIFICATION.key(), jsonClassification);
             }
             json.put(JsonCpmKey.PerceivedObjectContainer.CONFIDENCE.key(), confidence.getJson());
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "CPM PerceivedObject JSON build error", "Error: " + e);
         }
     }
 
@@ -848,7 +852,7 @@ public class PerceivedObject {
     }
 
     public static PerceivedObject jsonParser(JSONObject json) {
-        if(json == null || json.length() == 0) return null;
+        if(json == null || json.isEmpty()) return null;
         try {
             int objectId = json.getInt(JsonCpmKey.PerceivedObjectContainer.OBJECT_ID.key());
             int timeOfMeasurement = json.getInt(JsonCpmKey.PerceivedObjectContainer.TIME_OF_MEASUREMENT.key());
@@ -926,7 +930,7 @@ public class PerceivedObject {
                     classification,
                     confidence);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "CPM PerceivedObject JSON parsing error", "Error: " + e);
         }
         return null;
     }

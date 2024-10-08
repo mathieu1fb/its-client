@@ -40,10 +40,10 @@ public class CPM extends MessageBase {
 
     /**
      * Time of the reference position in the CPM, considered as time of the CPM generation.
-     *
+     * <p>
      * TimestampIts mod 65 536. TimestampIts represents an integer value in milliseconds since
      * 2004-01-01T00:00:00:000Z.
-     *
+     * <p>
      * oneMilliSec(1).
      */
     private final int generationDeltaTime;
@@ -134,12 +134,12 @@ public class CPM extends MessageBase {
             json.put(JsonKey.Header.ORIGIN.key(), getOrigin());
             json.put(JsonKey.Header.VERSION.key(), getVersion());
             json.put(JsonKey.Header.SOURCE_UUID.key(), getSourceUuid());
-            if(!getDestinationUuid().equals(""))
+            if(!getDestinationUuid().isEmpty())
                 json.put(JsonKey.Header.DESTINATION_UUID.key(), getDestinationUuid());
             json.put(JsonKey.Header.TIMESTAMP.key(), getTimestamp());
             json.put(JsonKey.Header.MESSAGE.key(), message);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "CPM JSON build error", "Error: " + e);
         }
     }
 
@@ -176,7 +176,7 @@ public class CPM extends MessageBase {
     }
     
     public static class CPMBuilder {
-        private String type;
+        private final String type;
         private String origin;
         private String version;
         private String sourceUuid;
@@ -276,7 +276,7 @@ public class CPM extends MessageBase {
     }
     
     public static CPM jsonParser(JSONObject json) {
-        if(json == null || json.length() == 0) return null;
+        if(json == null || json.isEmpty()) return null;
         try {
             String type = json.getString(JsonKey.Header.TYPE.key());
 
@@ -321,7 +321,7 @@ public class CPM extends MessageBase {
                         .build();
             }
         } catch (JSONException | IllegalArgumentException e) {
-            LOGGER.log(Level.WARNING, "CPM", "Error parsing CPM: " + e);
+            LOGGER.log(Level.WARNING, "CPM JSON parsing error", "Error: " + e);
         }
         return null;
     }

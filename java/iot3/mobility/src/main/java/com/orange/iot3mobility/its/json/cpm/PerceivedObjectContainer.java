@@ -11,8 +11,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class PerceivedObjectContainer {
+
+    private static final Logger LOGGER = Logger.getLogger(PerceivedObjectContainer.class.getName());
 
     private final JSONArray jsonArray = new JSONArray();
 
@@ -44,7 +48,7 @@ public class PerceivedObjectContainer {
     }
 
     public static PerceivedObjectContainer jsonParser(JSONArray jsonArray) {
-        if(jsonArray == null || jsonArray.length() == 0) return null;
+        if(jsonArray == null || jsonArray.isEmpty()) return null;
         try {
             ArrayList<PerceivedObject> perceivedObjects = new ArrayList<>();
             for (int i = 0; i < jsonArray.length(); i++) {
@@ -54,7 +58,7 @@ public class PerceivedObjectContainer {
 
             return new PerceivedObjectContainer(perceivedObjects);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "CPM PerceivedObjectContainer JSON parsing error", "Error: " + e);
         }
         return null;
     }
