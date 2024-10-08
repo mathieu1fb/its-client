@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 
 public class BasicContainer {
 
-    private static final Logger LOGGER = Logger.getLogger(CAM.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(BasicContainer.class.getName());
 
     private final JSONObject jsonBasicContainer = new JSONObject();
     private final int stationType;

@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 
 public class HighFrequencyContainer {
 
-    private static final Logger LOGGER = Logger.getLogger(CAM.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(HighFrequencyContainer.class.getName());
 
     private final JSONObject jsonHighFrequencyContainer = new JSONObject();
     private final int heading;

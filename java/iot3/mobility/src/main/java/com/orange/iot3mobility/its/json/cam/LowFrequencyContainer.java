@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 
 public class LowFrequencyContainer {
 
-    private static final Logger LOGGER = Logger.getLogger(CAM.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(LowFrequencyContainer.class.getName());
 
     private final JSONObject jsonLowFrequencyContainer = new JSONObject();
     private final int vehicleRole;
