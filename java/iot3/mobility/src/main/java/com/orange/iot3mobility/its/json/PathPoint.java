@@ -9,10 +9,16 @@ package com.orange.iot3mobility.its.json;
 
 import static com.orange.iot3mobility.its.json.JsonUtil.UNKNOWN;
 
+import com.orange.iot3mobility.its.json.cpm.CPM;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class PathPoint {
+
+    private static final Logger LOGGER = Logger.getLogger(PathPoint.class.getName());
 
     private final JSONObject jsonPathPoint = new JSONObject();
     private final PathPosition pathPosition;
@@ -44,7 +50,7 @@ public class PathPoint {
             if(pathDeltaTime != UNKNOWN)
                 jsonPathPoint.put(JsonKey.PathPoint.PATH_DELTA_TIME.key(), pathDeltaTime);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "PathPoint JSON build error", "Error: " + e);
         }
     }
 
@@ -65,7 +71,7 @@ public class PathPoint {
     }
 
     public static PathPoint jsonParser(JSONObject jsonPathPoint) {
-        if(jsonPathPoint == null || jsonPathPoint.length() == 0) return null;
+        if(jsonPathPoint == null || jsonPathPoint.isEmpty()) return null;
         JSONObject jsonPathPosition = jsonPathPoint.optJSONObject(JsonKey.PathPoint.PATH_POSITION.key());
         PathPosition pathPosition = PathPosition.jsonParser(jsonPathPosition);
         int pathDeltaTime = jsonPathPoint.optInt(JsonKey.PathPoint.PATH_DELTA_TIME.key(), UNKNOWN);

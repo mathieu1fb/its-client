@@ -11,10 +11,16 @@ import static com.orange.iot3mobility.its.json.JsonUtil.UNKNOWN;
 
 import com.orange.iot3mobility.its.EtsiUtils;
 
+import com.orange.iot3mobility.its.json.cpm.CPM;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class Position {
+
+    private static final Logger LOGGER = Logger.getLogger(Position.class.getName());
 
     private final JSONObject jsonPosition = new JSONObject();
     private final long latitude;
@@ -59,7 +65,7 @@ public class Position {
             if(altitude != UNKNOWN)
                 jsonPosition.put(JsonKey.Position.ALTITUDE.key(), altitude);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "Position JSON build error", "Error: " + e);
         }
     }
 
@@ -92,7 +98,7 @@ public class Position {
     }
 
     public static Position jsonParser(JSONObject jsonPosition) {
-        if(jsonPosition == null || jsonPosition.length() == 0) return null;
+        if(jsonPosition == null || jsonPosition.isEmpty()) return null;
         try {
             long latitude = jsonPosition.getLong(JsonKey.Position.LATITUDE.key());
             long longitude = jsonPosition.getLong(JsonKey.Position.LONGITUDE.key());
@@ -103,7 +109,7 @@ public class Position {
                     longitude,
                     altitude);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "Position JSON parsing error", "Error: " + e);
         }
         return null;
     }
