@@ -315,6 +315,39 @@ public class PerceivedObjectConfidence {
     public PerceivedObjectConfidence(
             final int xDistance,
             final int yDistance,
+            final int xSpeed,
+            final int ySpeed,
+            final int object
+    ) throws IllegalArgumentException {
+        this(
+                xDistance,
+                yDistance,
+                UNKNOWN,
+                xSpeed,
+                ySpeed,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                UNKNOWN,
+                object);
+    }
+
+    public PerceivedObjectConfidence(
+            final int xDistance,
+            final int yDistance,
             final int zDistance,
             final int xSpeed,
             final int ySpeed,

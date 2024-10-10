@@ -54,6 +54,9 @@ public class ManagementContainer {
             throw new IllegalArgumentException("CPM ManagementContainer ReferencePosition missing.");
         }
         this.referencePosition = referencePosition;
+        if(confidence == null) {
+            throw new IllegalArgumentException("CPM ManagementContainer Confidence missing.");
+        }
         this.confidence = confidence;
 
         createJson();
