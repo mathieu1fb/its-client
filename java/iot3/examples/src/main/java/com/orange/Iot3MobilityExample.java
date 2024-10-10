@@ -3,11 +3,14 @@ package com.orange;
 import com.orange.iot3mobility.IoT3Mobility;
 import com.orange.iot3mobility.IoT3MobilityCallback;
 import com.orange.iot3mobility.TrueTime;
+import com.orange.iot3mobility.Utils;
 import com.orange.iot3mobility.its.EtsiUtils;
 import com.orange.iot3mobility.its.HazardType;
 import com.orange.iot3mobility.its.StationType;
 import com.orange.iot3mobility.its.json.JsonValue;
 import com.orange.iot3mobility.its.json.Position;
+import com.orange.iot3mobility.its.json.PositionConfidence;
+import com.orange.iot3mobility.its.json.PositionConfidenceEllipse;
 import com.orange.iot3mobility.its.json.cam.CAM;
 import com.orange.iot3mobility.its.json.cpm.*;
 import com.orange.iot3mobility.its.json.denm.DENM;
@@ -185,11 +188,61 @@ public class Iot3MobilityExample {
 
     private static void sendTestDenm() {
         LatLng position = new LatLng(48.626059, 2.247904); // planar area of UTAC TEQMO
-        ioT3Mobility.sendHazard(HazardType.ACCIDENT_NO_SUBCAUSE, position, 5, 7, StationType.PASSENGER_CAR);
+        ioT3Mobility.sendHazard(HazardType.ACCIDENT_NO_SUBCAUSE, position, 10, 7, StationType.PASSENGER_CAR);
     }
 
     private static void sendTestCpm() {
         LatLng position = new LatLng(48.625152, 2.240349); // city area of UTAC TEQMO
+
+        PerceivedObject pedestrianPo = new PerceivedObject.PerceivedObjectBuilder(
+                12,
+                0,
+                1500)
+                .distance(-1800 + Utils.randomBetween(-10, 10),
+                        200 + Utils.randomBetween(-10, 10))
+                .speed(0,
+                        0)
+                .objectDimension(10,
+                        10,
+                        20,
+                        0)
+                .classification(List.of(new ClassificationItem(
+                        new ObjectClassSingleVru(
+                                new ObjectVruPedestrian(1)),
+                        100)))
+                .sensorIdList(List.of(123))
+                .confidence(new PerceivedObjectConfidence(
+                        0,
+                        0,
+                        0,
+                        0,
+                        15))
+                .build();
+
+        PerceivedObject bicyclePo = new PerceivedObject.PerceivedObjectBuilder(
+                34,
+                0,
+                1500)
+                .distance(1500 + Utils.randomBetween(-10, 10),
+                        100 + Utils.randomBetween(-10, 10))
+                .speed(0,
+                        0)
+                .objectDimension(20,
+                        20,
+                        15,
+                        0)
+                .classification(List.of(new ClassificationItem(
+                        new ObjectClassSingleVru(
+                                new ObjectVruBicyclist(1)),
+                        100)))
+                .sensorIdList(List.of(123))
+                .confidence(new PerceivedObjectConfidence(
+                        0,
+                        0,
+                        0,
+                        0,
+                        15))
+                .build();
 
         CPM cpm = new CPM.CPMBuilder()
                 .header(JsonValue.Origin.SELF.value(),
@@ -201,11 +254,16 @@ public class Iot3MobilityExample {
                         (int) (TrueTime.getAccurateETSITime() % 65536))
                 .managementContainer(
                         new ManagementContainer(
-                                StationType.PASSENGER_CAR.getId(),
+                                StationType.ROAD_SIDE_UNIT.getId(),
                                 new Position(
                                         (long) (position.getLatitude() * EtsiUtils.ETSI_COORDINATES_FACTOR),
                                         (long) (position.getLongitude() * EtsiUtils.ETSI_COORDINATES_FACTOR)),
-                                null))
+                                new PositionConfidence(
+                                        new PositionConfidenceEllipse(
+                                                0,
+                                                0,
+                                                0),
+                                        0)))
                 .stationDataContainer(
                         new StationDataContainer(
                                 new OriginatingRsuContainer(
@@ -214,42 +272,13 @@ public class Iot3MobilityExample {
                         new SensorInformationContainer(
                                 List.of(new SensorInformation(123, 4,
                                         new DetectionArea(
-                                                new StationarySensorCircular(50))))))
+                                                new StationarySensorCircular(
+                                                        new Offset(0, 0, 0),
+                                                        200))))))
                 .perceivedObjectContainer(
                         new PerceivedObjectContainer(
-                                List.of(new PerceivedObject(
-                                        123,
-                                        0,
-                                        1000,
-                                        1000,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        10,
-                                        10,
-                                        20,
-                                        0,
-                                        1500,
-                                        List.of(123),
-                                        1,
-                                        List.of(new ClassificationItem(
-                                                new ObjectClassSingleVru(
-                                                        new ObjectVruPedestrian(1)),
-                                                100)),
-                                        null))))
+                                List.of(pedestrianPo,
+                                        bicyclePo)))
                 .build();
 
         ioT3Mobility.sendCpm(cpm);
