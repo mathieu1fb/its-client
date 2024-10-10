@@ -29,12 +29,11 @@ public class CAM extends MessageBase {
     private final HighFrequencyContainer highFrequencyContainer;
     private final LowFrequencyContainer lowFrequencyContainer;
 
-    public CAM(
+    private CAM(
             final String type,
             final String origin,
             final String version,
             final String sourceUuid,
-            final String destinationUuid,
             final long timestamp,
             final int protocolVersion,
             final long stationId,
@@ -43,7 +42,7 @@ public class CAM extends MessageBase {
             final HighFrequencyContainer highFrequencyContainer,
             final LowFrequencyContainer lowFrequencyContainer)
     {
-        super(type, origin, version, sourceUuid, destinationUuid, timestamp);
+        super(type, origin, version, sourceUuid, timestamp);
         if(protocolVersion > 255 || protocolVersion < 0) {
             throw new IllegalArgumentException("CAM ProtocolVersion should be in the range of [0 - 255]."
                     + " Value: " + protocolVersion);
@@ -87,8 +86,6 @@ public class CAM extends MessageBase {
             jsonCAM.put(JsonKey.Header.ORIGIN.key(), getOrigin());
             jsonCAM.put(JsonKey.Header.VERSION.key(), getVersion());
             jsonCAM.put(JsonKey.Header.SOURCE_UUID.key(), getSourceUuid());
-            if(!getDestinationUuid().isEmpty())
-                jsonCAM.put(JsonKey.Header.DESTINATION_UUID.key(), getDestinationUuid());
             jsonCAM.put(JsonKey.Header.TIMESTAMP.key(), getTimestamp());
             jsonCAM.put(JsonKey.Header.MESSAGE.key(), message);
         } catch (JSONException e) {
@@ -129,7 +126,6 @@ public class CAM extends MessageBase {
         private String origin;
         private String version;
         private String sourceUuid;
-        private String destinationUuid;
         private long timestamp;
         private int protocolVersion;
         private long stationId;
@@ -145,24 +141,10 @@ public class CAM extends MessageBase {
         public CAMBuilder header(String origin,
                                  String version,
                                  String sourceUuid,
-                                 String destinationUuid,
                                  long timestamp) {
             this.origin = origin;
             this.version = version;
             this.sourceUuid = sourceUuid;
-            this.destinationUuid = destinationUuid;
-            this.timestamp = timestamp;
-            return this;
-        }
-
-        public CAMBuilder header(String origin,
-                                 String version,
-                                 String sourceUuid,
-                                 long timestamp) {
-            this.origin = origin;
-            this.version = version;
-            this.sourceUuid = sourceUuid;
-            this.destinationUuid = "";
             this.timestamp = timestamp;
             return this;
         }
@@ -196,7 +178,6 @@ public class CAM extends MessageBase {
                     origin,
                     version,
                     sourceUuid,
-                    destinationUuid,
                     timestamp,
                     protocolVersion,
                     stationId,
@@ -218,7 +199,6 @@ public class CAM extends MessageBase {
                 String origin = jsonCAM.getString(JsonKey.Header.ORIGIN.key());
                 String version = jsonCAM.getString(JsonKey.Header.VERSION.key());
                 String sourceUuid = jsonCAM.getString(JsonKey.Header.SOURCE_UUID.key());
-                String destinationUuid = jsonCAM.optString(JsonKey.Header.DESTINATION_UUID.key());
                 long timestamp = jsonCAM.getLong(JsonKey.Header.TIMESTAMP.key());
 
                 int protocolVersion = message.getInt(JsonKey.Cam.PROTOCOL_VERSION.key());
@@ -238,7 +218,6 @@ public class CAM extends MessageBase {
                         .header(origin,
                                 version,
                                 sourceUuid,
-                                destinationUuid,
                                 timestamp)
                         .pduHeader(protocolVersion,
                                 stationId,
