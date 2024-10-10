@@ -195,53 +195,39 @@ public class Iot3MobilityExample {
         LatLng position = new LatLng(48.625152, 2.240349); // city area of UTAC TEQMO
 
         PerceivedObject pedestrianPo = new PerceivedObject.PerceivedObjectBuilder(
-                12,
-                0,
-                1500)
+                12, 0, 1500)
                 .distance(-1800 + Utils.randomBetween(-10, 10),
                         200 + Utils.randomBetween(-10, 10))
-                .speed(0,
-                        0)
-                .objectDimension(10,
-                        10,
-                        20,
-                        0)
+                .speed(0, 0)
+                .objectDimension(10, 10, 20, 0)
                 .classification(List.of(new ClassificationItem(
                         new ObjectClassSingleVru(
                                 new ObjectVruPedestrian(1)),
                         100)))
                 .sensorIdList(List.of(123))
-                .confidence(new PerceivedObjectConfidence(
-                        0,
-                        0,
-                        0,
-                        0,
-                        15))
+                .confidence(
+                        new PerceivedObjectConfidence.PerceivedObjectConfidenceBuilder(15)
+                                .distance(0, 0)
+                                .speed(0, 0)
+                                .build())
                 .build();
 
         PerceivedObject bicyclePo = new PerceivedObject.PerceivedObjectBuilder(
-                34,
-                0,
-                1500)
+                34, 0, 1500)
                 .distance(1500 + Utils.randomBetween(-10, 10),
                         100 + Utils.randomBetween(-10, 10))
-                .speed(0,
-                        0)
-                .objectDimension(20,
-                        20,
-                        15,
-                        0)
+                .speed(0, 0)
+                .objectDimension(20, 20, 15, 0)
                 .classification(List.of(new ClassificationItem(
                         new ObjectClassSingleVru(
                                 new ObjectVruBicyclist(1)),
                         100)))
                 .sensorIdList(List.of(123))
-                .confidence(new PerceivedObjectConfidence(
-                        0,
-                        0,
-                        0,
-                        0,
-                        15))
+                .confidence(
+                        new PerceivedObjectConfidence.PerceivedObjectConfidenceBuilder(15)
+                                .distance(0, 0)
+                                .speed(0, 0)
+                                .build())
                 .build();
 
         CPM cpm = new CPM.CPMBuilder()
@@ -259,10 +245,7 @@ public class Iot3MobilityExample {
                                         (long) (position.getLatitude() * EtsiUtils.ETSI_COORDINATES_FACTOR),
                                         (long) (position.getLongitude() * EtsiUtils.ETSI_COORDINATES_FACTOR)),
                                 new PositionConfidence(
-                                        new PositionConfidenceEllipse(
-                                                0,
-                                                0,
-                                                0),
+                                        new PositionConfidenceEllipse(0, 0, 0),
                                         0)))
                 .stationDataContainer(
                         new StationDataContainer(
