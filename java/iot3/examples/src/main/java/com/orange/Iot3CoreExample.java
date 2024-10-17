@@ -9,11 +9,15 @@ import java.util.concurrent.TimeUnit;
 
 public class Iot3CoreExample {
 
-    private static final String EXAMPLE_MQTT_HOST = "mqtt_host";
-    private static final String EXAMPLE_MQTT_USERNAME = "mqtt_username";
-    private static final String EXAMPLE_MQTT_PASSWORD = "mqtt_password";
-    private static final String EXAMPLE_MQTT_CLIENT_ID = "mqtt_client_id";
-    private static final String EXAMPLE_OTL_HOST = "open_telemetry_host";
+    private static final String EXAMPLE_MQTT_HOST = "90.84.47.115";
+    private static final int EXAMPLE_MQTT_PORT_TCP = 11884;
+    private static final int EXAMPLE_MQTT_PORT_TLS = 18883;
+    private static final String EXAMPLE_MQTT_USERNAME = "geo";
+    private static final String EXAMPLE_MQTT_PASSWORD = "geo";
+    private static final String EXAMPLE_MQTT_CLIENT_ID = "ora_iot3core_test";
+    private static final String EXAMPLE_OTL_HOST = "90.84.47.115";
+    private static final int EXAMPLE_OTL_PORT = 18000;
+    private static final String EXAMPLE_OTL_ENDPOINT = "/telemetry/default/v1/traces";
 
     private static IoT3Core ioT3Core;
 
@@ -21,6 +25,8 @@ public class Iot3CoreExample {
         // instantiate IoT3Core and its callback
         ioT3Core = new IoT3Core(
                 EXAMPLE_MQTT_HOST,
+                EXAMPLE_MQTT_PORT_TCP,
+                EXAMPLE_MQTT_PORT_TLS,
                 EXAMPLE_MQTT_USERNAME,
                 EXAMPLE_MQTT_PASSWORD,
                 EXAMPLE_MQTT_CLIENT_ID,
@@ -59,7 +65,9 @@ public class Iot3CoreExample {
                         else System.out.println("MQTT unsubscription failed");
                     }
                 },
-                EXAMPLE_OTL_HOST);
+                EXAMPLE_OTL_HOST,
+                EXAMPLE_OTL_PORT,
+                EXAMPLE_OTL_ENDPOINT);
     }
 
     private static void onConnectionComplete() {
