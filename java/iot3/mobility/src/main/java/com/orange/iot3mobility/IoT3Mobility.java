@@ -117,20 +117,24 @@ public class IoT3Mobility {
             }
         };
 
-        ioT3Core = new IoT3Core.IoT3CoreBuilder()
+        IoT3Core.IoT3CoreBuilder ioT3CoreBuilder = new IoT3Core.IoT3CoreBuilder()
                 .mqttParams(mqttHost,
                         mqttPort,
                         mqttUsername,
                         mqttPassword,
                         uuid,
                         mqttUseTls)
-                .telemetryParams(telemetryHost,
-                        telemetryPort,
-                        telemetryEndpoint,
-                        telemetryUsername,
-                        telemetryPassword)
-                .callback(ioT3CoreCallback)
-                .build();
+                .callback(ioT3CoreCallback);
+
+        if(telemetryHost != null) {
+            ioT3CoreBuilder.telemetryParams(telemetryHost,
+                    telemetryPort,
+                    telemetryEndpoint,
+                    telemetryUsername,
+                    telemetryPassword);
+        }
+
+        ioT3Core = ioT3CoreBuilder.build();
 
         roIManager = new RoIManager(ioT3Core, uuid, context);
 
@@ -399,7 +403,7 @@ public class IoT3Mobility {
         private String mqttPassword;
         private boolean mqttUseTls;
         private IoT3MobilityCallback ioT3MobilityCallback;
-        private String telemetryHost;
+        private String telemetryHost = null; // will remain null if not initialized
         private int telemetryPort;
         private String telemetryEndpoint;
         private String telemetryUsername;
@@ -439,9 +443,9 @@ public class IoT3Mobility {
         }
 
         /**
-         * Set the OpenTelemetry parameters of your IoT3Mobility instance.
+         * Optional. Set the OpenTelemetry parameters of your IoT3Mobility instance.
          *
-         * @param telemetryHost the host or IP address of the OpenTelemetry server
+         * @param telemetryHost the host or IP address of the OpenTelemetry server, must not be null
          * @param telemetryPort the port of the OpenTelemetry server
          * @param telemetryEndpoint the endpoint of the OpenTelemetry server (e.g. /endpoint/example)
          * @param telemetryUsername the username for authentication with the OpenTelemetry server
@@ -452,6 +456,7 @@ public class IoT3Mobility {
                                                         String telemetryEndpoint,
                                                         String telemetryUsername,
                                                         String telemetryPassword) {
+            if(telemetryHost == null) throw new IllegalArgumentException("telemetryHost cannot be null");
             this.telemetryHost = telemetryHost;
             this.telemetryPort = telemetryPort;
             this.telemetryEndpoint = telemetryEndpoint;
