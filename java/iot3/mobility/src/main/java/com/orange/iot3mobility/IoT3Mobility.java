@@ -473,21 +473,25 @@ public class IoT3Mobility {
          * and {@link #telemetryParams(String, int, String, String, String)}.
          *
          * @param bootstrapConfig the bootstrap configuration object you get from the
+         * @param enableTelemetry enable telemetry for performance measurements
          * {@link com.orange.iot3core.bootstrap.BootstrapHelper} bootstrap sequence
          */
-        public IoT3Mobility.IoT3MobilityBuilder bootstrapConfig(BootstrapConfig bootstrapConfig) {
+        public IoT3Mobility.IoT3MobilityBuilder bootstrapConfig(BootstrapConfig bootstrapConfig,
+                                                                boolean enableTelemetry) {
             URI mqttUri = bootstrapConfig.getServiceUri(BootstrapConfig.Service.MQTT);
             this.mqttHost = mqttUri.getHost();
             this.mqttPort = mqttUri.getPort();
             this.mqttUsername = bootstrapConfig.getPskRunLogin();
             this.mqttPassword = bootstrapConfig.getPskRunPassword();
             this.mqttUseTls = bootstrapConfig.isServiceSecured(BootstrapConfig.Service.MQTT);
-            URI telemetryUri = bootstrapConfig.getServiceUri(BootstrapConfig.Service.OPEN_TELEMETRY);
-            this.telemetryHost = telemetryUri.getHost();
-            this.telemetryPort = telemetryUri.getPort();
-            this.telemetryEndpoint = telemetryUri.getPath();
-            this.telemetryUsername = bootstrapConfig.getPskRunLogin();
-            this.telemetryPassword = bootstrapConfig.getPskRunPassword();
+            if(enableTelemetry) {
+                URI telemetryUri = bootstrapConfig.getServiceUri(BootstrapConfig.Service.OPEN_TELEMETRY);
+                this.telemetryHost = telemetryUri.getHost();
+                this.telemetryPort = telemetryUri.getPort();
+                this.telemetryEndpoint = telemetryUri.getPath();
+                this.telemetryUsername = bootstrapConfig.getPskRunLogin();
+                this.telemetryPassword = bootstrapConfig.getPskRunPassword();
+            }
             return this;
         }
 
