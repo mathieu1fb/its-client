@@ -87,6 +87,7 @@ public class BootstrapHelper {
     public enum Role {
         EXTERNAL_APP("external-app"),
         INTERNAL_APP("internal-app"),
+        MONITORING_APP("monitoring-app"),
         NEIGHBOUR("neighbour"),
         USER_EQUIPMENT("user-equipment");
 
