@@ -65,7 +65,7 @@ class RoadHazardManagerTest {
         ManagementContainer mgmt = ManagementContainer.builder()
                 .actionId(new ActionId(originatingStationId, sequenceNumber))
                 .detectionTime(0)
-                .referenceTime(0)
+                .referenceTime(-1)
                 .eventPosition(pos)
                 .validityDuration(validityDurationSec)
                 .termination(termination)
