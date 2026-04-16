@@ -148,8 +148,10 @@ The manager key for each road object is a **composite string**, not just the `so
 | `RoadUser` | `{sourceUuid}_{stationId}`                            |
 | `RoadHazard` | `{sourceUuid}_{sequence_number}`                            |
 | `RoadSensor` / `SensorObject` | `{sourceUuid}_{stationId}`                            |
+| `RoadGeometry` | `{sourceUuid}_{stationId}`                            |
 
 Two CAM messages from the same vehicle but with different `stationId` values will create two separate `RoadUser` entries.
+MAPEM fragments from the same station (`layerId > 0`) share the same `RoadGeometry` object — `layerId` is a network fragmentation artefact and is not included in the key.
 
 ### Bootstrap Flow (Optional)
 
