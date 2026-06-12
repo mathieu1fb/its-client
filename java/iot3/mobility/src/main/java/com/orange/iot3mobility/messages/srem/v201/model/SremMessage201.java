@@ -1,0 +1,74 @@
+/*
+ Copyright 2016-2026 Orange
+
+ This software is distributed under the MIT license, see LICENSE.txt file for more details.
+
+ @author Mathieu LEFEBVRE <mathieu1.lefebvre@orange.com>
+ @generated GitHub Copilot (Claude Sonnet 4.6)
+ */
+package com.orange.iot3mobility.messages.srem.v201.model;
+
+import com.orange.iot3mobility.messages.srem.v201.model.request.RequestorDescription;
+import com.orange.iot3mobility.messages.srem.v201.model.request.SignalRequestPackage;
+
+import java.util.List;
+
+/**
+ * SREM payload — Signal Request Extended Message.
+ *
+ * @param protocolVersion Required. Message and protocol version [0..255].
+ * @param stationId       Required. Originating station ID [0..4294967295].
+ * @param second          Required. Milliseconds within the current minute [0..60999].
+ * @param requestor       Required. Requesting device description.
+ * @param timestamp       Optional. Minute of the current UTC year [0..527040].
+ * @param sequenceNumber  Optional. Sequence number [0..127].
+ * @param requests        Optional. List of signal requests [1..32].
+ */
+public record SremMessage201(
+        int protocolVersion,
+        long stationId,
+        int second,
+        RequestorDescription requestor,
+        Integer timestamp,
+        Integer sequenceNumber,
+        List<SignalRequestPackage> requests) {
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private Integer protocolVersion;
+        private Long stationId;
+        private Integer second;
+        private RequestorDescription requestor;
+        private Integer timestamp;
+        private Integer sequenceNumber;
+        private List<SignalRequestPackage> requests;
+
+        private Builder() {}
+
+        public Builder protocolVersion(int protocolVersion) { this.protocolVersion = protocolVersion; return this; }
+        public Builder stationId(long stationId) { this.stationId = stationId; return this; }
+        public Builder second(int second) { this.second = second; return this; }
+        public Builder requestor(RequestorDescription requestor) { this.requestor = requestor; return this; }
+        public Builder timestamp(Integer timestamp) { this.timestamp = timestamp; return this; }
+        public Builder sequenceNumber(Integer sequenceNumber) { this.sequenceNumber = sequenceNumber; return this; }
+        public Builder requests(List<SignalRequestPackage> requests) { this.requests = requests; return this; }
+
+        public SremMessage201 build() {
+            return new SremMessage201(
+                    requireNonNull(protocolVersion, "protocolVersion"),
+                    requireNonNull(stationId, "stationId"),
+                    requireNonNull(second, "second"),
+                    requireNonNull(requestor, "requestor"),
+                    timestamp, sequenceNumber, requests);
+        }
+
+        private static <T> T requireNonNull(T value, String field) {
+            if (value == null) throw new IllegalStateException("Missing field: " + field);
+            return value;
+        }
+    }
+}
+
