@@ -40,6 +40,10 @@ import com.orange.iot3mobility.messages.mcm.v200.model.McmEnvelope200;
 import com.orange.iot3mobility.messages.spatem.SpatemHelper;
 import com.orange.iot3mobility.messages.spatem.v200.model.SpatemEnvelope200;
 import com.orange.iot3mobility.messages.spatem.v200.model.intersection.IntersectionState;
+import com.orange.iot3mobility.messages.srem.SremHelper;
+import com.orange.iot3mobility.messages.srem.v201.model.SremEnvelope201;
+import com.orange.iot3mobility.messages.ssem.SsemHelper;
+import com.orange.iot3mobility.messages.ssem.v201.model.SsemEnvelope201;
 import com.orange.iot3mobility.managers.*;
 import com.orange.iot3mobility.roadobjects.SignalController;
 import com.orange.iot3mobility.quadkey.LatLng;
@@ -51,6 +55,8 @@ import com.orange.iot3mobility.roadobjects.RoadIntersection;
 import com.orange.iot3mobility.roadobjects.RoadSensor;
 import com.orange.iot3mobility.roadobjects.RoadSegment;
 import com.orange.iot3mobility.roadobjects.RoadUser;
+import com.orange.iot3mobility.roadobjects.SignalPriorityRequest;
+import com.orange.iot3mobility.roadobjects.SignalPriorityStatus;
 
 import java.io.IOException;
 import java.net.URI;
@@ -80,6 +86,8 @@ public class IoT3Mobility {
     private final MapemHelper mapemHelper = new MapemHelper();
     private final SpatemHelper spatemHelper = new SpatemHelper();
     private final McmHelper mcmHelper = new McmHelper();
+    private final SremHelper sremHelper = new SremHelper();
+    private final SsemHelper ssemHelper = new SsemHelper();
 
     private final String uuid;
     private final String context;
@@ -417,6 +425,8 @@ public class IoT3Mobility {
         else if(topic.contains("/mapem/")) RoadGeometryManager.processMapem(message, mapemHelper);
         else if(topic.contains("/spatem/")) SignalControllerManager.processSpatem(message, spatemHelper);
         else if(topic.contains("/mcm/")) ManoeuvreSessionManager.processMcm(message, mcmHelper);
+        else if(topic.contains("/srem/")) SignalRequestManager.processSrem(message, sremHelper);
+        else if(topic.contains("/ssem/")) SignalStatusManager.processSsem(message, ssemHelper);
     }
 
     /**
@@ -835,8 +845,7 @@ public class IoT3Mobility {
      * @param mcmV200 the MCM envelope to send.
      * @throws IOException if JSON serialisation fails.
      */
-    public void sendMcm(McmEnvelope200 mcmV200) throws IOException {
-        double latitude = com.orange.iot3mobility.messages.EtsiConverter.latitudeDegrees(
+    public void sendMcm(McmEnvelope200 mcmV200) throws IOException {        double latitude = com.orange.iot3mobility.messages.EtsiConverter.latitudeDegrees(
                 mcmV200.message().position().latitude());
         double longitude = com.orange.iot3mobility.messages.EtsiConverter.longitudeDegrees(
                 mcmV200.message().position().longitude());
@@ -845,6 +854,213 @@ public class IoT3Mobility {
         String topic = context + "/inQueue/v2x/mcm/" + uuid + geoExtension;
 
         if (isConnected()) ioT3Core.mqttPublish(topic, mcmHelper.toJson(mcmV200), false, 0, 1);
+    }
+
+    // =========================================================================
+    // Signal Priority (SREM / SSEM)
+    // =========================================================================
+
+    /**
+     * Sets the Region of Interest (RoI) for signal priority requests (SREM) based on a
+     * specific geographical position and zoom level.
+     * <p>
+     * Intended for RSU-side deployments that want to receive SREM messages from vehicles.
+     *
+     * @param position          the LatLng representing the target geographical position for the RoI.
+     * @param level             the zoom level for the RoI, which should be between 1 and 22.
+     * @param withNeighborTiles include neighboring tiles around the computed target tile.
+     */
+    public void setSremRoI(LatLng position, int level, boolean withNeighborTiles) {
+        if (roIManager != null) roIManager.setSremRoI(position, level, withNeighborTiles);
+    }
+
+    /**
+     * Set up the signal priority request callback to be informed of
+     * {@link SignalPriorityRequest} lifecycle events in the RoI defined with
+     * {@link #setSremRoI(LatLng, int, boolean)}.
+     *
+     * @param ioT3SignalRequestCallback the callback for SREM-derived request events
+     */
+    public void setSremCallback(IoT3SignalRequestCallback ioT3SignalRequestCallback) {
+        SignalRequestManager.init(ioT3SignalRequestCallback);
+    }
+
+    /**
+     * Sets the Region of Interest (RoI) for signal priority statuses (SSEM) based on a
+     * specific geographical position and zoom level.
+     * <p>
+     * Intended for vehicle-side deployments that want to receive SSEM responses from RSUs.
+     *
+     * @param position          the LatLng representing the target geographical position for the RoI.
+     * @param level             the zoom level for the RoI, which should be between 1 and 22.
+     * @param withNeighborTiles include neighboring tiles around the computed target tile.
+     */
+    public void setSsemRoI(LatLng position, int level, boolean withNeighborTiles) {
+        if (roIManager != null) roIManager.setSsemRoI(position, level, withNeighborTiles);
+    }
+
+    /**
+     * Set up the signal priority status callback to be informed of
+     * {@link SignalPriorityStatus} lifecycle events in the RoI defined with
+     * {@link #setSsemRoI(LatLng, int, boolean)}.
+     *
+     * @param ioT3SignalStatusCallback the callback for SSEM-derived status events
+     */
+    public void setSsemCallback(IoT3SignalStatusCallback ioT3SignalStatusCallback) {
+        SignalStatusManager.init(ioT3SignalStatusCallback);
+    }
+
+    /**
+     * Sets the Region of Interest (RoI) for both signal priority requests (SREM) and statuses
+     * (SSEM) simultaneously, using the same position and zoom level.
+     * <p>
+     * Equivalent to calling {@link #setSremRoI} and {@link #setSsemRoI} with the same parameters.
+     *
+     * @param position          the LatLng representing the target geographical position for the RoI.
+     * @param level             the zoom level for the RoI, which should be between 1 and 22.
+     * @param withNeighborTiles include neighboring tiles around the computed target tile.
+     */
+    public void setSignalPriorityRoI(LatLng position, int level, boolean withNeighborTiles) {
+        if (roIManager != null) roIManager.setSignalPriorityRoI(position, level, withNeighborTiles);
+    }
+
+    /**
+     * Set up the unified signal priority callback to be informed of both SREM-derived request
+     * events and SSEM-derived status events in the RoI defined with
+     * {@link #setSignalPriorityRoI(LatLng, int, boolean)}.
+     * <p>
+     * Equivalent to calling {@link #setSremCallback} and {@link #setSsemCallback} with the same object.
+     *
+     * @param ioT3SignalPriorityCallback the unified callback for SREM and SSEM events
+     */
+    public void setSignalPriorityCallback(IoT3SignalPriorityCallback ioT3SignalPriorityCallback) {
+        SignalRequestManager.init(ioT3SignalPriorityCallback);
+        SignalStatusManager.init(ioT3SignalPriorityCallback);
+    }
+
+    /**
+     * Send an SREM - Signal Request Extended Message - v2.0.1.
+     * <p>
+     * The publish topic is geo-routed using a quadkey derived from the requestor position
+     * embedded in the message ({@code requestor.position}). If no position is present,
+     * {@code fallbackPosition} is used. Throws {@link IOException} if no position is available.
+     *
+     * @param sremV201         the SREM envelope to send
+     * @param fallbackPosition optional fallback position when no requestor position is embedded;
+     *                         may be {@code null} if a requestor position is guaranteed
+     * @throws IOException if no position can be resolved or JSON serialisation fails
+     */
+    public void sendSrem(SremEnvelope201 sremV201, LatLng fallbackPosition) throws IOException {
+        double lat;
+        double lon;
+
+        com.orange.iot3mobility.messages.srem.v201.model.request.Position3D pos = null;
+        if (sremV201.message().requestor() != null
+                && sremV201.message().requestor().position() != null
+                && sremV201.message().requestor().position().position() != null) {
+            pos = sremV201.message().requestor().position().position();
+        }
+
+        if (pos != null) {
+            lat = EtsiConverter.latitudeDegrees(pos.lat());
+            lon = EtsiConverter.longitudeDegrees(pos.lon());
+        } else if (fallbackPosition != null) {
+            lat = fallbackPosition.getLatitude();
+            lon = fallbackPosition.getLongitude();
+        } else {
+            throw new IOException(
+                    "Cannot send SREM: no requestor position in the message and no fallback position provided.");
+        }
+
+        String quadkey = QuadTileHelper.latLngToQuadKey(lat, lon, 22);
+        String geoExtension = QuadTileHelper.quadKeyToQuadTopic(quadkey);
+        String topic = context + "/inQueue/v2x/srem/" + uuid + geoExtension;
+
+        if (isConnected()) ioT3Core.mqttPublish(topic, sremHelper.toJson(sremV201), false, 0, 1);
+    }
+
+    /**
+     * Send an SSEM - Signal Status Extended Message - v2.0.1.
+     * <p>
+     * The publish topic is geo-routed using a quadkey resolved from the MAPEM cache for the
+     * first intersection referenced in {@code status[0].id}. If no MAPEM-derived position is
+     * found, {@code fallbackPosition} is used. Throws {@link IOException} if no position is available.
+     *
+     * @param ssemV201         the SSEM envelope to send
+     * @param fallbackPosition optional fallback position used when no MAPEM position is available;
+     *                         may be {@code null} if MAPEM data is guaranteed to be present
+     * @throws IOException if no position can be resolved or JSON serialisation fails
+     */
+    public void sendSsem(SsemEnvelope201 ssemV201, LatLng fallbackPosition) throws IOException {
+        double lat;
+        double lon;
+
+        LatLng resolvedPosition = null;
+        if (ssemV201.message().status() != null && !ssemV201.message().status().isEmpty()) {
+            var firstStatus = ssemV201.message().status().get(0);
+            int regionId = firstStatus.id().region() != null ? firstStatus.id().region() : 0;
+            int intersectionId = firstStatus.id().id();
+
+            for (RoadIntersection roadIntersection : RoadGeometryManager.getRoadIntersections()) {
+                if (roadIntersection.getRegionId() == regionId
+                        && roadIntersection.getIntersectionId() == intersectionId) {
+                    resolvedPosition = roadIntersection.getRefPoint();
+                    break;
+                }
+            }
+        }
+
+        if (resolvedPosition != null) {
+            lat = resolvedPosition.getLatitude();
+            lon = resolvedPosition.getLongitude();
+        } else if (fallbackPosition != null) {
+            lat = fallbackPosition.getLatitude();
+            lon = fallbackPosition.getLongitude();
+        } else {
+            throw new IOException(
+                    "Cannot send SSEM: no MAPEM-derived position available for the first intersection"
+                            + " and no fallback position provided.");
+        }
+
+        String quadkey = QuadTileHelper.latLngToQuadKey(lat, lon, 22);
+        String geoExtension = QuadTileHelper.quadKeyToQuadTopic(quadkey);
+        String topic = context + "/inQueue/v2x/ssem/" + uuid + geoExtension;
+
+        if (isConnected()) ioT3Core.mqttPublish(topic, ssemHelper.toJson(ssemV201), false, 0, 1);
+    }
+
+    /**
+     * Retrieve a read-only snapshot of all currently active signal priority requests.
+     *
+     * @return the read-only list of {@link SignalPriorityRequest} objects
+     */
+    public static List<SignalPriorityRequest> getSignalPriorityRequests() {
+        return SignalRequestManager.getSignalPriorityRequests();
+    }
+
+    /**
+     * Retrieve a read-only snapshot of all currently active signal priority statuses.
+     *
+     * @return the read-only list of {@link SignalPriorityStatus} objects
+     */
+    public static List<SignalPriorityStatus> getSignalPriorityStatuses() {
+        return SignalStatusManager.getSignalPriorityStatuses();
+    }
+
+    /**
+     * Remove all stored signal priority requests immediately without firing expiry callbacks.
+     * Call this when leaving a geographic area to avoid unbounded memory growth.
+     */
+    public static void clearSignalPriorityRequests() {
+        SignalRequestManager.clear();
+    }
+
+    /**
+     * Remove all stored signal priority statuses immediately without firing expiry callbacks.
+     * Call this when leaving a geographic area to avoid unbounded memory growth.
+     */
+    public static void clearSignalPriorityStatuses() {
+        SignalStatusManager.clear();
     }
 
     /**

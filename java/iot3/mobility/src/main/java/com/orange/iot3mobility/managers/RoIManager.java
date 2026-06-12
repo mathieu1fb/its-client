@@ -27,6 +27,8 @@ public class RoIManager {
     private String subscriptionMapemTopicBase = "/outQueue/v2x/mapem/+";
     private String subscriptionSpatemTopicBase = "/outQueue/v2x/spatem/+";
     private String subscriptionMcmTopicBase = "/outQueue/v2x/mcm/+";
+    private String subscriptionSremTopicBase = "/outQueue/v2x/srem/+";
+    private String subscriptionSsemTopicBase = "/outQueue/v2x/ssem/+";
 
     private String currentCamKey;
     private String currentCpmKey;
@@ -34,6 +36,8 @@ public class RoIManager {
     private String currentMapemKey;
     private String currentSpatemKey;
     private String currentMcmKey;
+    private String currentSremKey;
+    private String currentSsemKey;
 
     private final ArrayList<String> CURRENT_CAM_KEYS = new ArrayList<>();
     private final ArrayList<String> CURRENT_CPM_KEYS = new ArrayList<>();
@@ -41,6 +45,8 @@ public class RoIManager {
     private final ArrayList<String> CURRENT_MAPEM_KEYS = new ArrayList<>();
     private final ArrayList<String> CURRENT_SPATEM_KEYS = new ArrayList<>();
     private final ArrayList<String> CURRENT_MCM_KEYS = new ArrayList<>();
+    private final ArrayList<String> CURRENT_SREM_KEYS = new ArrayList<>();
+    private final ArrayList<String> CURRENT_SSEM_KEYS = new ArrayList<>();
 
     public RoIManager(IoT3Core ioT3Core, String uuid, String topicRoot) {
         this.ioT3Core = ioT3Core;
@@ -54,6 +60,8 @@ public class RoIManager {
         subscriptionMapemTopicBase = topicRoot + subscriptionMapemTopicBase;
         subscriptionSpatemTopicBase = topicRoot + subscriptionSpatemTopicBase;
         subscriptionMcmTopicBase = topicRoot + subscriptionMcmTopicBase;
+        subscriptionSremTopicBase = topicRoot + subscriptionSremTopicBase;
+        subscriptionSsemTopicBase = topicRoot + subscriptionSsemTopicBase;
 
         ioT3Core.mqttSubscribe(subscriptionDenmTopicPrivate);
     }
@@ -212,6 +220,61 @@ public class RoIManager {
     public void setIntersectionRoI(LatLng position, int level, boolean withNeighborTiles) {
         setRoadGeometryRoI(position, level, withNeighborTiles);
         setTrafficLightRoI(position, level, withNeighborTiles);
+    }
+
+    /**
+     * Sets the Region of Interest (RoI) for signal priority requests (SREM) based on a specific
+     * geographical position and zoom level. Intended for RSU-side deployments that want to receive
+     * SREM messages from vehicles in the area.
+     *
+     * @param position          the LatLng representing the target geographical position for the RoI.
+     * @param level             the zoom level for the RoI, which should be between 1 and 22.
+     * @param withNeighborTiles include neighboring tiles around the computed target tile.
+     */
+    public void setSremRoI(LatLng position, int level, boolean withNeighborTiles) {
+        String quadkey = QuadTileHelper.latLngToQuadKey(position.latitude, position.longitude, level);
+        if (!quadkey.equals(currentSremKey)) {
+            ArrayList<String> tileKeys = getTiles(quadkey, withNeighborTiles);
+            updateSubscriptions(tileKeys, CURRENT_SREM_KEYS, subscriptionSremTopicBase, level < 22);
+            CURRENT_SREM_KEYS.clear();
+            CURRENT_SREM_KEYS.addAll(tileKeys);
+            currentSremKey = quadkey;
+        }
+    }
+
+    /**
+     * Sets the Region of Interest (RoI) for signal priority statuses (SSEM) based on a specific
+     * geographical position and zoom level. Intended for vehicle-side deployments that want to receive
+     * SSEM responses from RSUs in the area.
+     *
+     * @param position          the LatLng representing the target geographical position for the RoI.
+     * @param level             the zoom level for the RoI, which should be between 1 and 22.
+     * @param withNeighborTiles include neighboring tiles around the computed target tile.
+     */
+    public void setSsemRoI(LatLng position, int level, boolean withNeighborTiles) {
+        String quadkey = QuadTileHelper.latLngToQuadKey(position.latitude, position.longitude, level);
+        if (!quadkey.equals(currentSsemKey)) {
+            ArrayList<String> tileKeys = getTiles(quadkey, withNeighborTiles);
+            updateSubscriptions(tileKeys, CURRENT_SSEM_KEYS, subscriptionSsemTopicBase, level < 22);
+            CURRENT_SSEM_KEYS.clear();
+            CURRENT_SSEM_KEYS.addAll(tileKeys);
+            currentSsemKey = quadkey;
+        }
+    }
+
+    /**
+     * Sets the Region of Interest (RoI) for both signal priority requests (SREM) and signal
+     * priority statuses (SSEM) simultaneously, using the same position and zoom level.
+     * <p>
+     * Equivalent to calling {@link #setSremRoI} and {@link #setSsemRoI} with the same parameters.
+     *
+     * @param position          the LatLng representing the target geographical position for the RoI.
+     * @param level             the zoom level for the RoI, which should be between 1 and 22.
+     * @param withNeighborTiles include neighboring tiles around the computed target tile.
+     */
+    public void setSignalPriorityRoI(LatLng position, int level, boolean withNeighborTiles) {
+        setSremRoI(position, level, withNeighborTiles);
+        setSsemRoI(position, level, withNeighborTiles);
     }
 
     private ArrayList<String> getTiles(String quadkey, boolean withNeighborTiles) {
