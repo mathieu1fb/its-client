@@ -1,0 +1,189 @@
+/*
+ Copyright 2016-2026 Orange
+
+ This software is distributed under the MIT license, see LICENSE.txt file for more details.
+
+ @author Mathieu LEFEBVRE <mathieu1.lefebvre@orange.com>
+ @generated GitHub Copilot (Claude Sonnet 4.6)
+ */
+package com.orange.iot3mobility.roadobjects;
+
+import com.orange.iot3mobility.messages.srem.core.SremCodec;
+import com.orange.iot3mobility.messages.srem.v201.model.request.IntersectionAccessPoint;
+import com.orange.iot3mobility.quadkey.LatLng;
+
+/**
+ * Represents one active signal priority or preemption request from a single vehicle or VRU,
+ * derived from a received SREM (Signal Request Extended Message, ETSI IS TS 103 301).
+ * <p>
+ * One {@code SignalPriorityRequest} is maintained per {@code (sourceUuid, stationId, requestId)}
+ * triplet. Multiple requests from the same station for different intersections each produce a
+ * separate object.
+ * <p>
+ * <strong>Key format:</strong> {@code {sourceUuid}_{stationId}_{requestId}}
+ * <p>
+ * Objects expire on a rolling {@link #LIFETIME_MS}-millisecond timeout. Vehicles must emit
+ * at least one SREM per second while a request is active; a 3-second window provides a
+ * comfortable margin above that minimum rate.
+ * <p>
+ * Instances are created and managed exclusively by
+ * {@link com.orange.iot3mobility.managers.SignalRequestManager};
+ * application code should not construct them directly.
+ */
+public class SignalPriorityRequest {
+
+    /**
+     * Rolling timeout in milliseconds.
+     * Vehicles must emit at least 1 SREM/s while a request is active (ETSI minimum);
+     * 3 000 ms gives a comfortable grace margin.
+     */
+    public static final int LIFETIME_MS = 3000;
+
+    /** Composite key: {@code {sourceUuid}_{stationId}_{requestId}}. */
+    private final String uuid;
+
+    /** MQTT source UUID of the requesting station. */
+    private final String sourceUuid;
+
+    /** Station ID of the requesting ITS-S, from the SREM message header. */
+    private final long stationId;
+
+    /** Request identifier, unique per station for the duration of the request [0..255]. */
+    private final int requestId;
+
+    /**
+     * Priority request type [0..3]:
+     * {@code 0} = reserved, {@code 1} = priorityRequest, {@code 2} = priorityRequestUpdate,
+     * {@code 3} = priorityCancellation.
+     */
+    private final int requestType;
+
+    /** Regional component of the target intersection ID (0 when absent in the SREM). */
+    private final int regionId;
+
+    /** Local intersection ID of the target intersection. */
+    private final int intersectionId;
+
+    /** Inbound lane or approach where the requestor is currently located. */
+    private final IntersectionAccessPoint inboundLane;
+
+    /**
+     * Geographic position of the requestor at the time the SREM was sent, decoded from
+     * DSRC units to WGS-84 degrees. {@code null} when the SREM contains no position.
+     */
+    private final LatLng position;
+
+    /** Latest raw SREM frame used to populate or refresh this object. */
+    private SremCodec.SremFrame<?> sremFrame;
+
+    /** Timestamp of the last received SREM update, used for rolling-expiry calculation. */
+    private long timestamp;
+
+    /** Package-private: constructed only by {@link com.orange.iot3mobility.managers.SignalRequestManager}. */
+    public SignalPriorityRequest(String uuid,
+                          String sourceUuid,
+                          long stationId,
+                          int requestId,
+                          int requestType,
+                          int regionId,
+                          int intersectionId,
+                          IntersectionAccessPoint inboundLane,
+                          LatLng position,
+                          SremCodec.SremFrame<?> sremFrame) {
+        this.uuid = uuid;
+        this.sourceUuid = sourceUuid;
+        this.stationId = stationId;
+        this.requestId = requestId;
+        this.requestType = requestType;
+        this.regionId = regionId;
+        this.intersectionId = intersectionId;
+        this.inboundLane = inboundLane;
+        this.position = position;
+        this.sremFrame = sremFrame;
+        updateTimestamp();
+    }
+
+    // -------------------------------------------------------------------------
+    // Update
+    // -------------------------------------------------------------------------
+
+    /** Updates the raw frame reference and resets the rolling expiry clock. */
+    public void update(SremCodec.SremFrame<?> sremFrame) {
+        this.sremFrame = sremFrame;
+        updateTimestamp();
+    }
+
+    // -------------------------------------------------------------------------
+    // Getters
+    // -------------------------------------------------------------------------
+
+    /** Returns the composite manager key ({@code {sourceUuid}_{stationId}_{requestId}}). */
+    public String getUuid() { return uuid; }
+
+    /** Returns the MQTT source UUID of the requesting station. */
+    public String getSourceUuid() { return sourceUuid; }
+
+    /** Returns the station ID of the requesting ITS-S. */
+    public long getStationId() { return stationId; }
+
+    /** Returns the request ID [0..255]. */
+    public int getRequestId() { return requestId; }
+
+    /**
+     * Returns the priority request type [0..3]:
+     * reserved (0), priorityRequest (1), priorityRequestUpdate (2), priorityCancellation (3).
+     */
+    public int getRequestType() { return requestType; }
+
+    /** Returns the regional component of the target intersection ID (0 when absent). */
+    public int getRegionId() { return regionId; }
+
+    /** Returns the local ID of the target intersection. */
+    public int getIntersectionId() { return intersectionId; }
+
+    /** Returns the inbound lane or approach at the target intersection. */
+    public IntersectionAccessPoint getInboundLane() { return inboundLane; }
+
+    /**
+     * Returns the WGS-84 position of the requestor at the time of the SREM,
+     * or {@code null} if no position was included in the message.
+     */
+    public LatLng getPosition() { return position; }
+
+    /** Returns the latest raw SREM frame for this request. */
+    public SremCodec.SremFrame<?> getSremFrame() { return sremFrame; }
+
+    /** Returns the Unix-epoch timestamp of the last received SREM update. */
+    public long getTimestamp() { return timestamp; }
+
+    // -------------------------------------------------------------------------
+    // Lifecycle
+    // -------------------------------------------------------------------------
+
+    /** Resets the rolling expiry clock to the current wall-clock time. */
+    public void updateTimestamp() {
+        this.timestamp = System.currentTimeMillis();
+    }
+
+    /**
+     * Returns {@code true} if this request is still within its {@link #LIFETIME_MS} window
+     * and has not yet expired.
+     */
+    public boolean stillLiving() {
+        return System.currentTimeMillis() - timestamp < LIFETIME_MS;
+    }
+
+    // -------------------------------------------------------------------------
+    // Testing support (package-private)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Backdates the internal timestamp so that {@link #stillLiving()} immediately returns
+     * {@code false}. Use in unit tests together with the manager's expiry-check method to
+     * simulate a timeout without {@code Thread.sleep()}.
+     */
+    void backdateTimestampForTesting() {
+        this.timestamp = System.currentTimeMillis() - LIFETIME_MS - 1;
+    }
+}
+
