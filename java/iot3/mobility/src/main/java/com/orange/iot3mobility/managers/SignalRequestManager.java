@@ -14,10 +14,13 @@ import com.orange.iot3mobility.messages.srem.core.SremCodec;
 import com.orange.iot3mobility.messages.srem.core.SremVersion;
 import com.orange.iot3mobility.messages.srem.v201.model.SremEnvelope201;
 import com.orange.iot3mobility.messages.srem.v201.model.SremMessage201;
+import com.orange.iot3mobility.messages.srem.v201.model.request.IntersectionAccessPoint;
 import com.orange.iot3mobility.messages.srem.v201.model.request.Position3D;
 import com.orange.iot3mobility.messages.srem.v201.model.request.SignalRequest;
 import com.orange.iot3mobility.messages.srem.v201.model.request.SignalRequestPackage;
 import com.orange.iot3mobility.quadkey.LatLng;
+import com.orange.iot3mobility.roadobjects.PriorityAccessPoint;
+import com.orange.iot3mobility.roadobjects.PriorityRequestType;
 import com.orange.iot3mobility.roadobjects.RoadIntersection;
 import com.orange.iot3mobility.roadobjects.SignalController;
 import com.orange.iot3mobility.roadobjects.SignalPriorityRequest;
@@ -119,9 +122,11 @@ public class SignalRequestManager {
 
                 SignalPriorityRequest existing = SIGNAL_PRIORITY_REQUEST_MAP.get(key);
                 if (existing == null) {
+                    PriorityAccessPoint inboundLane = toLaneAccessPoint(req.inboundLane());
+                    PriorityRequestType requestType = PriorityRequestType.fromValue(req.requestType());
                     SignalPriorityRequest newRequest = new SignalPriorityRequest(
-                            key, sourceUuid, stationId, requestId, req.requestType(),
-                            regionId, intersectionId, req.inboundLane(),
+                            key, sourceUuid, stationId, requestId, requestType,
+                            regionId, intersectionId, inboundLane,
                             requestorPosition, sremFrame);
                     SIGNAL_PRIORITY_REQUEST_MAP.put(key, newRequest);
                     synchronized (SIGNAL_PRIORITY_REQUESTS) {
@@ -146,7 +151,7 @@ public class SignalRequestManager {
             if (request.resolveIntersectionRefPoint(intersection)) break;
         }
         for (SignalController controller : SignalControllerManager.getSignalControllers()) {
-            if (request.resolveInboundSignalGroupPosition(controller)) break;
+            if (request.resolveSignalGroupPosition(controller)) break;
         }
     }
 
@@ -180,13 +185,22 @@ public class SignalRequestManager {
     public static void tryResolvePositionsFromController(SignalController signalController) {
         synchronized (SIGNAL_PRIORITY_REQUESTS) {
             for (SignalPriorityRequest request : SIGNAL_PRIORITY_REQUESTS) {
-                if (request.resolveInboundSignalGroupPosition(signalController)) {
+                if (request.resolveSignalGroupPosition(signalController)) {
                     if (ioT3SignalRequestCallback != null) {
                         ioT3SignalRequestCallback.signalPriorityRequestUpdated(request);
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Converts a SREM model {@link IntersectionAccessPoint} to the version-agnostic
+     * {@link PriorityAccessPoint} road object type.
+     */
+    private static PriorityAccessPoint toLaneAccessPoint(IntersectionAccessPoint ap) {
+        if (ap == null) return null;
+        return new PriorityAccessPoint(ap.lane(), ap.approach(), ap.connection());
     }
 
     /**

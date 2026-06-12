@@ -13,7 +13,13 @@ import com.orange.iot3mobility.messages.ssem.core.SsemCodec;
 import com.orange.iot3mobility.messages.ssem.core.SsemVersion;
 import com.orange.iot3mobility.messages.ssem.v201.model.SsemEnvelope201;
 import com.orange.iot3mobility.messages.ssem.v201.model.SsemMessage201;
+import com.orange.iot3mobility.messages.ssem.v201.model.status.IntersectionAccessPoint;
+import com.orange.iot3mobility.messages.ssem.v201.model.status.SignalRequester;
 import com.orange.iot3mobility.messages.ssem.v201.model.status.SignalStatus;
+import com.orange.iot3mobility.messages.ssem.v201.model.status.SignalStatusPackage;
+import com.orange.iot3mobility.roadobjects.PriorityAccessPoint;
+import com.orange.iot3mobility.roadobjects.PriorityRequestStatus;
+import com.orange.iot3mobility.roadobjects.PriorityRequestStatusType;
 import com.orange.iot3mobility.roadobjects.RoadIntersection;
 import com.orange.iot3mobility.roadobjects.SignalPriorityStatus;
 
@@ -107,7 +113,7 @@ public class SignalStatusManager {
                 if (existing == null) {
                     SignalPriorityStatus newStatus = new SignalPriorityStatus(
                             key, sourceUuid, stationId, regionId, intersectionId,
-                            signalStatus.sigStatus(), ssemFrame);
+                            toPriorityRequestStatuses(signalStatus.sigStatus()), ssemFrame);
                     SIGNAL_PRIORITY_STATUS_MAP.put(key, newStatus);
                     synchronized (SIGNAL_PRIORITY_STATUSES) {
                         SIGNAL_PRIORITY_STATUSES.add(newStatus);
@@ -115,11 +121,44 @@ public class SignalStatusManager {
                     tryResolveForNew(newStatus);
                     ioT3SignalStatusCallback.newSignalPriorityStatus(newStatus);
                 } else {
-                    existing.update(signalStatus.sigStatus(), ssemFrame);
+                    existing.update(toPriorityRequestStatuses(signalStatus.sigStatus()), ssemFrame);
                     ioT3SignalStatusCallback.signalPriorityStatusUpdated(existing);
                 }
             }
         }
+    }
+
+    /**
+     * Converts a list of SSEM model {@link SignalStatusPackage} entries to the version-agnostic
+     * {@link PriorityRequestStatus} road object type.
+     */
+    private static List<PriorityRequestStatus> toPriorityRequestStatuses(
+            List<SignalStatusPackage> packages) {
+        List<PriorityRequestStatus> result = new ArrayList<>(packages.size());
+        for (SignalStatusPackage pkg : packages) {
+            result.add(toPriorityRequestStatus(pkg));
+        }
+        return result;
+    }
+
+    private static PriorityRequestStatus toPriorityRequestStatus(SignalStatusPackage pkg) {
+        SignalRequester requester = pkg.requester();
+        Long requestorStationId = requester != null ? requester.id() : null;
+        Integer requestId = requester != null ? requester.request() : null;
+        return new PriorityRequestStatus(
+                toLaneAccessPoint(pkg.inboundOn()),
+                PriorityRequestStatusType.fromValue(pkg.status()),
+                requestorStationId,
+                requestId,
+                toLaneAccessPoint(pkg.outboundOn()),
+                pkg.minute(),
+                pkg.second(),
+                pkg.duration());
+    }
+
+    private static PriorityAccessPoint toLaneAccessPoint(IntersectionAccessPoint ap) {
+        if (ap == null) return null;
+        return new PriorityAccessPoint(ap.lane(), ap.approach(), ap.connection());
     }
 
     /**

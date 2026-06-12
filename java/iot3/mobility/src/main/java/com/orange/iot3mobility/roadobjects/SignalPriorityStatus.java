@@ -9,7 +9,6 @@
 package com.orange.iot3mobility.roadobjects;
 
 import com.orange.iot3mobility.messages.ssem.core.SsemCodec;
-import com.orange.iot3mobility.messages.ssem.v201.model.status.SignalStatusPackage;
 import com.orange.iot3mobility.quadkey.LatLng;
 
 import java.util.Collections;
@@ -61,10 +60,10 @@ public class SignalPriorityStatus {
     private final int intersectionId;
 
     /**
-     * Current list of per-request status packages for this intersection.
+     * Current list of per-request status entries for this intersection.
      * Replaced in full on every SSEM update.
      */
-    private List<SignalStatusPackage> packages;
+    private List<PriorityRequestStatus> packages;
 
     /** Latest raw SSEM frame used to populate or refresh this object. */
     private SsemCodec.SsemFrame<?> ssemFrame;
@@ -80,12 +79,12 @@ public class SignalPriorityStatus {
 
     /** Package-private: constructed only by {@link com.orange.iot3mobility.managers.SignalStatusManager}. */
     public SignalPriorityStatus(String uuid,
-                         String sourceUuid,
-                         long stationId,
-                         int regionId,
-                         int intersectionId,
-                         List<SignalStatusPackage> packages,
-                         SsemCodec.SsemFrame<?> ssemFrame) {
+                                String sourceUuid,
+                                long stationId,
+                                int regionId,
+                                int intersectionId,
+                                List<PriorityRequestStatus> packages,
+                                SsemCodec.SsemFrame<?> ssemFrame) {
         this.uuid = uuid;
         this.sourceUuid = sourceUuid;
         this.stationId = stationId;
@@ -101,7 +100,7 @@ public class SignalPriorityStatus {
     // -------------------------------------------------------------------------
 
     /** Replaces the packages list and raw frame, and resets the staleness clock. */
-    public void update(List<SignalStatusPackage> packages, SsemCodec.SsemFrame<?> ssemFrame) {
+    public void update(List<PriorityRequestStatus> packages, SsemCodec.SsemFrame<?> ssemFrame) {
         this.packages = packages;
         this.ssemFrame = ssemFrame;
         updateTimestamp();
@@ -147,10 +146,10 @@ public class SignalPriorityStatus {
     public int getIntersectionId() { return intersectionId; }
 
     /**
-     * Returns a read-only view of the current per-request status packages for this intersection.
+     * Returns a read-only view of the current per-request status entries for this intersection.
      * Each entry describes the status of one requestor's priority/preemption request.
      */
-    public List<SignalStatusPackage> getPackages() {
+    public List<PriorityRequestStatus> getPackages() {
         return Collections.unmodifiableList(packages);
     }
 
@@ -196,4 +195,3 @@ public class SignalPriorityStatus {
         this.timestamp = System.currentTimeMillis() - MAX_STALENESS_MS - 1;
     }
 }
-

@@ -9,7 +9,6 @@
 package com.orange.iot3mobility.roadobjects;
 
 import com.orange.iot3mobility.messages.srem.core.SremCodec;
-import com.orange.iot3mobility.messages.srem.v201.model.request.IntersectionAccessPoint;
 import com.orange.iot3mobility.quadkey.LatLng;
 
 /**
@@ -28,7 +27,7 @@ import com.orange.iot3mobility.quadkey.LatLng;
  * <p>
  * Two optional geographic positions are resolved automatically from MAPEM/SPATEM data when
  * available: {@link #getIntersectionRefPoint()} (the target intersection reference point) and
- * {@link #getInboundSignalGroupPosition()} (the stop-line of the inbound signal group).
+ * {@link #getSignalGroupPosition()} (the stop-line of the inbound signal group).
  * <p>
  * Instances are created and managed exclusively by
  * {@link com.orange.iot3mobility.managers.SignalRequestManager};
@@ -55,12 +54,8 @@ public class SignalPriorityRequest {
     /** Request identifier, unique per station for the duration of the request [0..255]. */
     private final int requestId;
 
-    /**
-     * Priority request type [0..3]:
-     * {@code 0} = reserved, {@code 1} = priorityRequest, {@code 2} = priorityRequestUpdate,
-     * {@code 3} = priorityCancellation.
-     */
-    private final int requestType;
+    /** Type of priority or preemption request. */
+    private final PriorityRequestType requestType;
 
     /** Regional component of the target intersection ID (0 when absent in the SREM). */
     private final int regionId;
@@ -68,8 +63,8 @@ public class SignalPriorityRequest {
     /** Local intersection ID of the target intersection. */
     private final int intersectionId;
 
-    /** Inbound lane or approach where the requestor is currently located. */
-    private final IntersectionAccessPoint inboundLane;
+    /** Inbound access point where the requestor is currently located. */
+    private final PriorityAccessPoint accessPoint;
 
     /**
      * Geographic position of the requestor at the time the SREM was sent, decoded from
@@ -95,19 +90,19 @@ public class SignalPriorityRequest {
      * {@code null} until both MAPEM and SPATEM data are available for the target intersection,
      * or when {@code inboundLane} does not reference a lane ID.
      */
-    private LatLng inboundSignalGroupPosition;
+    private LatLng signalGroupPosition;
 
     /** Package-private: constructed only by {@link com.orange.iot3mobility.managers.SignalRequestManager}. */
     public SignalPriorityRequest(String uuid,
-                          String sourceUuid,
-                          long stationId,
-                          int requestId,
-                          int requestType,
-                          int regionId,
-                          int intersectionId,
-                          IntersectionAccessPoint inboundLane,
-                          LatLng position,
-                          SremCodec.SremFrame<?> sremFrame) {
+                                 String sourceUuid,
+                                 long stationId,
+                                 int requestId,
+                                 PriorityRequestType requestType,
+                                 int regionId,
+                                 int intersectionId,
+                                 PriorityAccessPoint accessPoint,
+                                 LatLng position,
+                                 SremCodec.SremFrame<?> sremFrame) {
         this.uuid = uuid;
         this.sourceUuid = sourceUuid;
         this.stationId = stationId;
@@ -115,7 +110,7 @@ public class SignalPriorityRequest {
         this.requestType = requestType;
         this.regionId = regionId;
         this.intersectionId = intersectionId;
-        this.inboundLane = inboundLane;
+        this.accessPoint = accessPoint;
         this.position = position;
         this.sremFrame = sremFrame;
         updateTimestamp();
@@ -152,22 +147,22 @@ public class SignalPriorityRequest {
     }
 
     /**
-     * Attempts to resolve {@link #inboundSignalGroupPosition} from the provided signal controller.
-     * Only applicable when {@link #inboundLane} carries a lane ID; does nothing for approach- or
+     * Attempts to resolve {@link #signalGroupPosition} from the provided signal controller.
+     * Only applicable when {@link #accessPoint} carries a lane ID; does nothing for approach- or
      * connection-based access points. Does nothing if already resolved, or if the controller does
      * not match this request's {@code (regionId, intersectionId)}.
      *
      * @param signalController candidate signal controller
      * @return {@code true} if the position was newly resolved by this call
      */
-    public boolean resolveInboundSignalGroupPosition(SignalController signalController) {
-        if (inboundSignalGroupPosition != null) return false;
+    public boolean resolveSignalGroupPosition(SignalController signalController) {
+        if (signalGroupPosition != null) return false;
         if (signalController.getRegionId() != regionId
                 || signalController.getIntersectionId() != intersectionId) return false;
-        if (inboundLane == null || inboundLane.lane() == null) return false;
-        SignalGroup signalGroup = signalController.getSignalGroupForLane(inboundLane.lane());
+        if (accessPoint == null || !accessPoint.hasLane()) return false;
+        SignalGroup signalGroup = signalController.getSignalGroupForLane(accessPoint.getLane());
         if (signalGroup == null || signalGroup.getPosition() == null) return false;
-        inboundSignalGroupPosition = signalGroup.getPosition();
+        signalGroupPosition = signalGroup.getPosition();
         return true;
     }
 
@@ -187,11 +182,8 @@ public class SignalPriorityRequest {
     /** Returns the request ID [0..255]. */
     public int getRequestId() { return requestId; }
 
-    /**
-     * Returns the priority request type [0..3]:
-     * reserved (0), priorityRequest (1), priorityRequestUpdate (2), priorityCancellation (3).
-     */
-    public int getRequestType() { return requestType; }
+    /** Returns the type of this priority or preemption request. */
+    public PriorityRequestType getRequestType() { return requestType; }
 
     /** Returns the regional component of the target intersection ID (0 when absent). */
     public int getRegionId() { return regionId; }
@@ -199,8 +191,8 @@ public class SignalPriorityRequest {
     /** Returns the local ID of the target intersection. */
     public int getIntersectionId() { return intersectionId; }
 
-    /** Returns the inbound lane or approach at the target intersection. */
-    public IntersectionAccessPoint getInboundLane() { return inboundLane; }
+    /** Returns the inbound access point at the target intersection. */
+    public PriorityAccessPoint getAccessPoint() { return accessPoint; }
 
     /**
      * Returns the WGS-84 position of the requestor at the time of the SREM,
@@ -225,7 +217,7 @@ public class SignalPriorityRequest {
      * resolved from MAPEM + SPATEM data, or {@code null} if not yet available or if the inbound
      * access point does not reference a lane ID.
      */
-    public LatLng getInboundSignalGroupPosition() { return inboundSignalGroupPosition; }
+    public LatLng getSignalGroupPosition() { return signalGroupPosition; }
 
     // -------------------------------------------------------------------------
     // Lifecycle
