@@ -96,6 +96,8 @@ public class SignalControllerManager {
                             for (SignalGroup signalGroup : signalController.getSignalGroups()) {
                                 ioT3SignalControllerCallback.newSignalGroup(signalController, signalGroup);
                             }
+                            // Notify SignalRequestManager so inbound signal group positions can be resolved
+                            SignalRequestManager.tryResolvePositionsFromController(signalController);
                         } else {
                             Set<Integer> knownGroupIds = new HashSet<>();
                             for (SignalGroup signalGroup : signalController.getSignalGroups()) {
@@ -151,6 +153,11 @@ public class SignalControllerManager {
                             ioT3SignalControllerCallback.signalGroupUpdated(
                                     signalController, signalGroup, SignalGroupUpdateType.POSITION);
                         }
+                    }
+                    if (!newlyResolved.isEmpty()) {
+                        // Signal group positions were just resolved — notify SignalRequestManager
+                        // so inbound signal group positions can be matched for any pending requests
+                        SignalRequestManager.tryResolvePositionsFromController(signalController);
                     }
                 }
             }

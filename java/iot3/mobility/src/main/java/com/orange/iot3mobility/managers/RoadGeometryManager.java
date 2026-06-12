@@ -109,7 +109,11 @@ public class RoadGeometryManager {
                 if (updated) {
                     // Notify SignalControllerManager so SPATEM signal groups get their positions resolved
                     RoadIntersection roadIntersection = roadGeometry.getIntersection(regionId, intersectionGeometry.id().id());
-                    if (roadIntersection != null) SignalControllerManager.tryResolvePositions(roadIntersection);
+                    if (roadIntersection != null) {
+                        SignalControllerManager.tryResolvePositions(roadIntersection);
+                        SignalRequestManager.tryResolvePositionsFromIntersection(roadIntersection);
+                        SignalStatusManager.tryResolvePositionsFromIntersection(roadIntersection);
+                    }
                 }
                 anyUpdate |= updated;
             }

@@ -10,6 +10,7 @@ package com.orange.iot3mobility.roadobjects;
 
 import com.orange.iot3mobility.messages.ssem.core.SsemCodec;
 import com.orange.iot3mobility.messages.ssem.v201.model.status.SignalStatusPackage;
+import com.orange.iot3mobility.quadkey.LatLng;
 
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +28,9 @@ import java.util.List;
  * <p>
  * Objects expire on a rolling {@link #MAX_STALENESS_MS}-millisecond timeout, matching
  * the staleness threshold used for {@link SignalController}.
+ * <p>
+ * The geographic reference point of the described intersection is resolved automatically from
+ * MAPEM data when available: see {@link #getIntersectionRefPoint()}.
  * <p>
  * Instances are created and managed exclusively by
  * {@link com.orange.iot3mobility.managers.SignalStatusManager};
@@ -68,6 +72,12 @@ public class SignalPriorityStatus {
     /** Timestamp of the last received SSEM update, used for staleness calculation. */
     private long timestamp;
 
+    /**
+     * Geographic reference point of the described intersection, resolved from MAPEM data.
+     * {@code null} until a matching {@link RoadIntersection} is available.
+     */
+    private LatLng intersectionRefPoint;
+
     /** Package-private: constructed only by {@link com.orange.iot3mobility.managers.SignalStatusManager}. */
     public SignalPriorityStatus(String uuid,
                          String sourceUuid,
@@ -95,6 +105,26 @@ public class SignalPriorityStatus {
         this.packages = packages;
         this.ssemFrame = ssemFrame;
         updateTimestamp();
+    }
+
+    // -------------------------------------------------------------------------
+    // Position resolution (called by managers only)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Attempts to resolve {@link #intersectionRefPoint} from the provided intersection.
+     * Does nothing if the ref point is already set, or if the intersection does not match
+     * this status's {@code (regionId, intersectionId)}.
+     *
+     * @param roadIntersection candidate intersection
+     * @return {@code true} if the ref point was newly resolved by this call
+     */
+    public boolean resolveIntersectionRefPoint(RoadIntersection roadIntersection) {
+        if (intersectionRefPoint != null) return false;
+        if (roadIntersection.getRegionId() != regionId
+                || roadIntersection.getIntersectionId() != intersectionId) return false;
+        intersectionRefPoint = roadIntersection.getRefPoint();
+        return intersectionRefPoint != null;
     }
 
     // -------------------------------------------------------------------------
@@ -129,6 +159,12 @@ public class SignalPriorityStatus {
 
     /** Returns the Unix-epoch timestamp of the last received SSEM update. */
     public long getTimestamp() { return timestamp; }
+
+    /**
+     * Returns the WGS-84 reference point of the described intersection, resolved from MAPEM data,
+     * or {@code null} if no MAPEM-derived intersection data is yet available.
+     */
+    public LatLng getIntersectionRefPoint() { return intersectionRefPoint; }
 
     // -------------------------------------------------------------------------
     // Lifecycle

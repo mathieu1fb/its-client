@@ -26,6 +26,10 @@ import com.orange.iot3mobility.quadkey.LatLng;
  * at least one SREM per second while a request is active; a 3-second window provides a
  * comfortable margin above that minimum rate.
  * <p>
+ * Two optional geographic positions are resolved automatically from MAPEM/SPATEM data when
+ * available: {@link #getIntersectionRefPoint()} (the target intersection reference point) and
+ * {@link #getInboundSignalGroupPosition()} (the stop-line of the inbound signal group).
+ * <p>
  * Instances are created and managed exclusively by
  * {@link com.orange.iot3mobility.managers.SignalRequestManager};
  * application code should not construct them directly.
@@ -79,6 +83,20 @@ public class SignalPriorityRequest {
     /** Timestamp of the last received SREM update, used for rolling-expiry calculation. */
     private long timestamp;
 
+    /**
+     * Geographic reference point of the target intersection, resolved from MAPEM data.
+     * {@code null} until a matching {@link RoadIntersection} is available.
+     */
+    private LatLng intersectionRefPoint;
+
+    /**
+     * Stop-line position of the signal group controlling the inbound approach, resolved from
+     * MAPEM + SPATEM data via {@link SignalController#getSignalGroupForLane(int)}.
+     * {@code null} until both MAPEM and SPATEM data are available for the target intersection,
+     * or when {@code inboundLane} does not reference a lane ID.
+     */
+    private LatLng inboundSignalGroupPosition;
+
     /** Package-private: constructed only by {@link com.orange.iot3mobility.managers.SignalRequestManager}. */
     public SignalPriorityRequest(String uuid,
                           String sourceUuid,
@@ -111,6 +129,46 @@ public class SignalPriorityRequest {
     public void update(SremCodec.SremFrame<?> sremFrame) {
         this.sremFrame = sremFrame;
         updateTimestamp();
+    }
+
+    // -------------------------------------------------------------------------
+    // Position resolution (called by managers only)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Attempts to resolve {@link #intersectionRefPoint} from the provided intersection.
+     * Does nothing if the ref point is already set, or if the intersection does not match
+     * this request's {@code (regionId, intersectionId)}.
+     *
+     * @param roadIntersection candidate intersection
+     * @return {@code true} if the ref point was newly resolved by this call
+     */
+    public boolean resolveIntersectionRefPoint(RoadIntersection roadIntersection) {
+        if (intersectionRefPoint != null) return false;
+        if (roadIntersection.getRegionId() != regionId
+                || roadIntersection.getIntersectionId() != intersectionId) return false;
+        intersectionRefPoint = roadIntersection.getRefPoint();
+        return intersectionRefPoint != null;
+    }
+
+    /**
+     * Attempts to resolve {@link #inboundSignalGroupPosition} from the provided signal controller.
+     * Only applicable when {@link #inboundLane} carries a lane ID; does nothing for approach- or
+     * connection-based access points. Does nothing if already resolved, or if the controller does
+     * not match this request's {@code (regionId, intersectionId)}.
+     *
+     * @param signalController candidate signal controller
+     * @return {@code true} if the position was newly resolved by this call
+     */
+    public boolean resolveInboundSignalGroupPosition(SignalController signalController) {
+        if (inboundSignalGroupPosition != null) return false;
+        if (signalController.getRegionId() != regionId
+                || signalController.getIntersectionId() != intersectionId) return false;
+        if (inboundLane == null || inboundLane.lane() == null) return false;
+        SignalGroup signalGroup = signalController.getSignalGroupForLane(inboundLane.lane());
+        if (signalGroup == null || signalGroup.getPosition() == null) return false;
+        inboundSignalGroupPosition = signalGroup.getPosition();
+        return true;
     }
 
     // -------------------------------------------------------------------------
@@ -155,6 +213,19 @@ public class SignalPriorityRequest {
 
     /** Returns the Unix-epoch timestamp of the last received SREM update. */
     public long getTimestamp() { return timestamp; }
+
+    /**
+     * Returns the WGS-84 reference point of the target intersection, resolved from MAPEM data,
+     * or {@code null} if no MAPEM-derived intersection data is yet available.
+     */
+    public LatLng getIntersectionRefPoint() { return intersectionRefPoint; }
+
+    /**
+     * Returns the WGS-84 stop-line position of the signal group controlling the inbound approach,
+     * resolved from MAPEM + SPATEM data, or {@code null} if not yet available or if the inbound
+     * access point does not reference a lane ID.
+     */
+    public LatLng getInboundSignalGroupPosition() { return inboundSignalGroupPosition; }
 
     // -------------------------------------------------------------------------
     // Lifecycle

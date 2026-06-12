@@ -14,6 +14,7 @@ import com.orange.iot3mobility.messages.ssem.core.SsemVersion;
 import com.orange.iot3mobility.messages.ssem.v201.model.SsemEnvelope201;
 import com.orange.iot3mobility.messages.ssem.v201.model.SsemMessage201;
 import com.orange.iot3mobility.messages.ssem.v201.model.status.SignalStatus;
+import com.orange.iot3mobility.roadobjects.RoadIntersection;
 import com.orange.iot3mobility.roadobjects.SignalPriorityStatus;
 
 import java.io.IOException;
@@ -111,10 +112,40 @@ public class SignalStatusManager {
                     synchronized (SIGNAL_PRIORITY_STATUSES) {
                         SIGNAL_PRIORITY_STATUSES.add(newStatus);
                     }
+                    tryResolveForNew(newStatus);
                     ioT3SignalStatusCallback.newSignalPriorityStatus(newStatus);
                 } else {
                     existing.update(signalStatus.sigStatus(), ssemFrame);
                     ioT3SignalStatusCallback.signalPriorityStatusUpdated(existing);
+                }
+            }
+        }
+    }
+
+    /**
+     * Attempts to resolve the intersection reference point on a newly created status object
+     * from already-available MAPEM data. Called immediately after creation.
+     */
+    private static void tryResolveForNew(SignalPriorityStatus status) {
+        for (RoadIntersection intersection : RoadGeometryManager.getRoadIntersections()) {
+            if (status.resolveIntersectionRefPoint(intersection)) break;
+        }
+    }
+
+    /**
+     * Called by {@link RoadGeometryManager} when a {@link RoadIntersection} is created or updated.
+     * Finds every {@link SignalPriorityStatus} describing that intersection and resolves its
+     * intersection reference point; fires {@code signalPriorityStatusUpdated} for each resolved object.
+     *
+     * @param roadIntersection the newly available intersection
+     */
+    public static void tryResolvePositionsFromIntersection(RoadIntersection roadIntersection) {
+        synchronized (SIGNAL_PRIORITY_STATUSES) {
+            for (SignalPriorityStatus status : SIGNAL_PRIORITY_STATUSES) {
+                if (status.resolveIntersectionRefPoint(roadIntersection)) {
+                    if (ioT3SignalStatusCallback != null) {
+                        ioT3SignalStatusCallback.signalPriorityStatusUpdated(status);
+                    }
                 }
             }
         }

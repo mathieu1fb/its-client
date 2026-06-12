@@ -18,6 +18,8 @@ import com.orange.iot3mobility.messages.srem.v201.model.request.Position3D;
 import com.orange.iot3mobility.messages.srem.v201.model.request.SignalRequest;
 import com.orange.iot3mobility.messages.srem.v201.model.request.SignalRequestPackage;
 import com.orange.iot3mobility.quadkey.LatLng;
+import com.orange.iot3mobility.roadobjects.RoadIntersection;
+import com.orange.iot3mobility.roadobjects.SignalController;
 import com.orange.iot3mobility.roadobjects.SignalPriorityRequest;
 
 import java.io.IOException;
@@ -125,10 +127,63 @@ public class SignalRequestManager {
                     synchronized (SIGNAL_PRIORITY_REQUESTS) {
                         SIGNAL_PRIORITY_REQUESTS.add(newRequest);
                     }
+                    tryResolveNewRequest(newRequest);
                     ioT3SignalRequestCallback.newSignalPriorityRequest(newRequest);
                 } else {
                     existing.update(sremFrame);
                     ioT3SignalRequestCallback.signalPriorityRequestUpdated(existing);
+                }
+            }
+        }
+    }
+
+    /**
+     * Attempts to resolve positions on a newly created request from already-available
+     * MAPEM and SPATEM data. Called immediately after creation.
+     */
+    private static void tryResolveNewRequest(SignalPriorityRequest request) {
+        for (RoadIntersection intersection : RoadGeometryManager.getRoadIntersections()) {
+            if (request.resolveIntersectionRefPoint(intersection)) break;
+        }
+        for (SignalController controller : SignalControllerManager.getSignalControllers()) {
+            if (request.resolveInboundSignalGroupPosition(controller)) break;
+        }
+    }
+
+    /**
+     * Called by {@link RoadGeometryManager} when a {@link RoadIntersection} is created or updated.
+     * Finds every {@link SignalPriorityRequest} targeting that intersection and resolves its
+     * intersection reference point; fires {@code signalPriorityRequestUpdated} for each resolved object.
+     *
+     * @param roadIntersection the newly available intersection
+     */
+    public static void tryResolvePositionsFromIntersection(RoadIntersection roadIntersection) {
+        synchronized (SIGNAL_PRIORITY_REQUESTS) {
+            for (SignalPriorityRequest request : SIGNAL_PRIORITY_REQUESTS) {
+                if (request.resolveIntersectionRefPoint(roadIntersection)) {
+                    if (ioT3SignalRequestCallback != null) {
+                        ioT3SignalRequestCallback.signalPriorityRequestUpdated(request);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Called by {@link SignalControllerManager} when a {@link SignalController} is created or its
+     * signal group positions are resolved from MAPEM data.
+     * Finds every {@link SignalPriorityRequest} targeting that intersection and attempts to resolve
+     * its inbound signal group position; fires {@code signalPriorityRequestUpdated} for each.
+     *
+     * @param signalController the newly available or updated signal controller
+     */
+    public static void tryResolvePositionsFromController(SignalController signalController) {
+        synchronized (SIGNAL_PRIORITY_REQUESTS) {
+            for (SignalPriorityRequest request : SIGNAL_PRIORITY_REQUESTS) {
+                if (request.resolveInboundSignalGroupPosition(signalController)) {
+                    if (ioT3SignalRequestCallback != null) {
+                        ioT3SignalRequestCallback.signalPriorityRequestUpdated(request);
+                    }
                 }
             }
         }
