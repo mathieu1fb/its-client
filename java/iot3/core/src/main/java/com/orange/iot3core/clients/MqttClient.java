@@ -383,6 +383,8 @@ public class MqttClient {
                     receivedSpanContext.getSpanId());
             receivedSpan.setAttribute(AttributeKey.stringKey("iot3.core.mqtt.topic"),
                     publish.getTopic().toString());
+            receivedSpan.setAttribute(AttributeKey.booleanKey("iot3.core.mqtt.retain"),
+                    publish.isRetain());
             receivedSpan.setAttribute(AttributeKey.stringKey("iot3.core.mqtt.payload_size"),
                     String.valueOf(message.length()));
             receivedSpan.setAttribute(AttributeKey.stringKey("iot3.core.sdk_language"), "java");
