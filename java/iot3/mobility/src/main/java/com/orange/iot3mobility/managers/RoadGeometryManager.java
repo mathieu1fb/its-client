@@ -47,6 +47,10 @@ public class RoadGeometryManager {
 
     public static void init(IoT3RoadGeometryCallback callback) {
         RoadGeometryManager.ioT3RoadGeometryCallback = callback;
+        // notify of pre-existing road geometries
+        for(RoadGeometry roadGeometry: ROAD_GEOMETRIES) {
+            callback.newRoadGeometry(roadGeometry);
+        }
     }
 
     // -------------------------------------------------------------------------

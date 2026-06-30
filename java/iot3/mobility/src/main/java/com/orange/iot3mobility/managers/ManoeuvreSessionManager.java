@@ -74,6 +74,10 @@ public class ManoeuvreSessionManager {
      */
     public static void init(IoT3ManoeuvreCallback callback) {
         ManoeuvreSessionManager.ioT3ManoeuvreCallback = callback;
+        // notify of pre-existing manoeuvre sessions
+        for(ManoeuvreSession manoeuvreSession: MANOEUVRE_SESSIONS) {
+            callback.newManoeuvreSession(manoeuvreSession);
+        }
         startExpirationCheck();
     }
 

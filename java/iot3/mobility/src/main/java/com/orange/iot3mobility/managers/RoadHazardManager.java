@@ -41,6 +41,10 @@ public class RoadHazardManager {
 
     public static void init(IoT3RoadHazardCallback ioT3RoadHazardCallback) {
         RoadHazardManager.ioT3RoadHazardCallback = ioT3RoadHazardCallback;
+        // notify of pre-existing road hazards
+        for(RoadHazard roadHazard: ROAD_HAZARDS) {
+            ioT3RoadHazardCallback.newRoadHazard(roadHazard);
+        }
         startExpirationCheck();
     }
 

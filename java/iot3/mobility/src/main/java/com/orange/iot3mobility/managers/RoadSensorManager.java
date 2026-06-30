@@ -17,6 +17,7 @@ import com.orange.iot3mobility.messages.cpm.v211.model.CpmEnvelope211;
 import com.orange.iot3mobility.messages.cpm.v211.model.CpmMessage211;
 import com.orange.iot3mobility.quadkey.LatLng;
 import com.orange.iot3mobility.roadobjects.RoadSensor;
+import com.orange.iot3mobility.roadobjects.SensorObject;
 
 import java.io.IOException;
 import java.util.*;
@@ -40,6 +41,13 @@ public class RoadSensorManager {
 
     public static void init(IoT3RoadSensorCallback ioT3RoadSensorCallback) {
         RoadSensorManager.ioT3RoadSensorCallback = ioT3RoadSensorCallback;
+        // notify of pre-existing road sensors and their sensor objects
+        for(RoadSensor roadSensor: ROAD_SENSORS) {
+            ioT3RoadSensorCallback.newRoadSensor(roadSensor);
+            for(SensorObject sensorObject: roadSensor.getSensorObjects()) {
+                ioT3RoadSensorCallback.newSensorObject(sensorObject);
+            }
+        }
         startExpirationCheck();
     }
 

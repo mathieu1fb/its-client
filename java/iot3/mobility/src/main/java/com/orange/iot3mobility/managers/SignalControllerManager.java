@@ -59,6 +59,13 @@ public class SignalControllerManager {
 
     public static void init(IoT3SignalControllerCallback callback) {
         SignalControllerManager.ioT3SignalControllerCallback = callback;
+        // notify of pre-existing signal controllers and their signal groups
+        for(SignalController signalController: SIGNAL_CONTROLLERS) {
+            callback.newSignalController(signalController);
+            for(SignalGroup signalGroup: signalController.getSignalGroups()) {
+                callback.newSignalGroup(signalController, signalGroup);
+            }
+        }
         startExpirationCheck();
     }
 

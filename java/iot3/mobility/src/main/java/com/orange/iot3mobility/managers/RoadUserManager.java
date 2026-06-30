@@ -41,6 +41,10 @@ public class RoadUserManager {
 
     public static void init(IoT3RoadUserCallback ioT3RoadUserCallback) {
         RoadUserManager.ioT3RoadUserCallback = ioT3RoadUserCallback;
+        // notify of pre-existing road users
+        for(RoadUser roadUser: ROAD_USERS) {
+            ioT3RoadUserCallback.newRoadUser(roadUser);
+        }
         startExpirationCheck();
     }
 
