@@ -60,7 +60,7 @@ public final class CamCodec {
         return switch (version) {
             case V1_1_3 -> new CamFrame<>(version,
                     reader113.read(new ByteArrayInputStream(payload)));
-            case V2_4_0 -> new CamFrame<>(version,
+            case V2_3_0, V2_4_0 -> new CamFrame<>(version,
                     reader240.read(new ByteArrayInputStream(payload)));
         };
     }
@@ -78,7 +78,7 @@ public final class CamCodec {
         return switch (version) {
             case V1_1_3 -> new CamFrame<>(version,
                     reader113.read(new ByteArrayInputStream(payload)));
-            case V2_4_0 -> new CamFrame<>(version,
+            case V2_3_0, V2_4_0 -> new CamFrame<>(version,
                     reader240.read(new ByteArrayInputStream(payload)));
         };
     }
