@@ -371,20 +371,39 @@ public class RoadSensor {
     private static final int SECTOR_ARC_POINTS = 16;
 
     /**
+     * Cache key used to detect whether the sensor geometry actually changed since the last {@link #updateSensorCoverages()}
+     * call, so the (comparatively expensive) polygon computation can be skipped when it's unnecessary. Most CPM
+     * senders (especially fixed RSU sensors) republish the exact same {@code sensorInformationContainer} on every
+     * frame while only {@code perceivedObjectContainer} varies; {@code headingEtsi} is included because it affects
+     * the resolved {@code vehicleSensor} polygon (v1.2.1) even when the sensor descriptor itself is unchanged.
+     */
+    private record CoverageCacheKey(Object sensorInformationContainer, Integer headingEtsi) {}
+
+    private CoverageCacheKey lastCoverageCacheKey;
+
+    /**
      * Recomputes the {@link #sensorCoverageMap} map from the current {@link #cpmFrame}, translating each
      * sensor's CPM detection area / perception region shape into one or more absolute geographic polygons.
+     * <p>
+     * Skipped entirely (cheap {@code equals()} check only) when neither the sensor information container nor
+     * the disseminating vehicle's heading changed since the last call, to avoid needlessly repeating the
+     * trigonometry-heavy polygon computation on every CPM frame.
      */
     private void updateSensorCoverages() {
         if (cpmFrame == null) return;
 
         if (cpmFrame.version() == CpmVersion.V1_2_1) {
             CpmEnvelope121 cpmEnvelope121 = (CpmEnvelope121) cpmFrame.envelope();
-            if (cpmEnvelope121.message().sensorInformationContainer() == null) return;
-            List<SensorInformation> sensorInformationList =
-                    cpmEnvelope121.message().sensorInformationContainer().sensorInformation();
-            if (sensorInformationList == null) return;
+            var sensorInformationContainer = cpmEnvelope121.message().sensorInformationContainer();
+            if (sensorInformationContainer == null) return;
 
             Integer headingEtsi = extractHeadingV121(cpmEnvelope121);
+            CoverageCacheKey cacheKey = new CoverageCacheKey(sensorInformationContainer, headingEtsi);
+            if (cacheKey.equals(lastCoverageCacheKey)) return; // geometry unchanged, skip recomputation
+            lastCoverageCacheKey = cacheKey;
+
+            List<SensorInformation> sensorInformationList = sensorInformationContainer.sensorInformation();
+            if (sensorInformationList == null) return;
 
             for (SensorInformation sensorInformation : sensorInformationList) {
                 List<List<LatLng>> coverageAreas = resolveCoverageV121(sensorInformation.detectionArea(), headingEtsi);
@@ -393,9 +412,16 @@ public class RoadSensor {
             }
         } else if (cpmFrame.version() == CpmVersion.V2_1_1) {
             CpmEnvelope211 cpmEnvelope211 = (CpmEnvelope211) cpmFrame.envelope();
-            if (cpmEnvelope211.message().sensorInformationContainer() == null) return;
+            var sensorInformationContainer = cpmEnvelope211.message().sensorInformationContainer();
+            if (sensorInformationContainer == null) return;
+
+            // No heading correction applies to v2.1.1 shapes (always WGS84-absolute), so it's excluded from the key.
+            CoverageCacheKey cacheKey = new CoverageCacheKey(sensorInformationContainer, null);
+            if (cacheKey.equals(lastCoverageCacheKey)) return; // geometry unchanged, skip recomputation
+            lastCoverageCacheKey = cacheKey;
+
             List<com.orange.iot3mobility.messages.cpm.v211.model.sensorinformationcontainer.SensorInformation>
-                    sensorInformationList = cpmEnvelope211.message().sensorInformationContainer().sensorInformation();
+                    sensorInformationList = sensorInformationContainer.sensorInformation();
             if (sensorInformationList == null) return;
 
             for (com.orange.iot3mobility.messages.cpm.v211.model.sensorinformationcontainer.SensorInformation
@@ -406,6 +432,7 @@ public class RoadSensor {
             }
         }
     }
+
 
     /**
      * @return the disseminating vehicle's heading in ETSI units (0.1 degree), or {@code null} if unavailable
