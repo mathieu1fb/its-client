@@ -13,6 +13,7 @@ package com.orange.iot3mobility;
 import com.orange.iot3core.IoT3Core;
 import com.orange.iot3core.IoT3CoreCallback;
 import com.orange.iot3core.bootstrap.BootstrapConfig;
+import com.orange.iot3core.clients.MqttTransport;
 import com.orange.iot3core.clients.lwm2m.model.*;
 import com.orange.iot3mobility.messages.EtsiConverter;
 import com.orange.iot3mobility.messages.StationType;
@@ -98,6 +99,8 @@ public class IoT3Mobility {
      * @param mqttUsername MQTT username
      * @param mqttPassword MQTT password
      * @param mqttUseTls use TLS for a secure connection with the MQTT broker
+     * @param mqttTransport transport layer of the MQTT connection (TCP or WebSocket)
+     * @param mqttWebSocketPath server path for WebSocket transport (ignored for TCP)
      * @param ioT3MobilityCallback callback to retrieve connection status
      * @param telemetryScheme Open Telemetry scheme (e.g. http, https)
      * @param telemetryHost Open Telemetry server address
@@ -113,6 +116,8 @@ public class IoT3Mobility {
                         String mqttUsername,
                         String mqttPassword,
                         boolean mqttUseTls,
+                        MqttTransport mqttTransport,
+                        String mqttWebSocketPath,
                         IoT3MobilityCallback ioT3MobilityCallback,
                         String telemetryScheme,
                         String telemetryHost,
@@ -161,13 +166,24 @@ public class IoT3Mobility {
             }
         };
 
-        IoT3Core.IoT3CoreBuilder ioT3CoreBuilder = new IoT3Core.IoT3CoreBuilder()
-                .mqttParams(mqttHost,
-                        mqttPort,
-                        mqttUsername,
-                        mqttPassword,
-                        uuid,
-                        mqttUseTls)
+        IoT3Core.IoT3CoreBuilder ioT3CoreBuilder = new IoT3Core.IoT3CoreBuilder();
+        if(mqttTransport == MqttTransport.WEBSOCKET) {
+            ioT3CoreBuilder.mqttWebSocketParams(mqttHost,
+                    mqttPort,
+                    mqttWebSocketPath,
+                    mqttUsername,
+                    mqttPassword,
+                    uuid,
+                    mqttUseTls);
+        } else {
+            ioT3CoreBuilder.mqttParams(mqttHost,
+                    mqttPort,
+                    mqttUsername,
+                    mqttPassword,
+                    uuid,
+                    mqttUseTls);
+        }
+        ioT3CoreBuilder
                 .mqttKeepAlive(10)
                 .callback(ioT3CoreCallback);
 
@@ -374,7 +390,6 @@ public class IoT3Mobility {
      * Sets the Region of Interest (RoI) for both road geometry (MAPEM) and signal phase and timing
      * (SPATEM) simultaneously, using the same position and zoom level.
      * <p>
-     * Equivalent to calling {@link #setMapRoI} and {@link #setSpatemRoI} with the same parameters.
      * Position resolution between SPATEM signal groups and MAPEM intersection geometry is automatic.
      *
      * @param position          the LatLng representing the target geographical position for the RoI.
@@ -390,8 +405,6 @@ public class IoT3Mobility {
      * and SPATEM-derived traffic light events in the RoI defined with
      * {@link #setIntersectionRoI(LatLng, int, boolean)}.
      * <p>
-     * Equivalent to calling {@link #setRoadGeometryCallback} and {@link #setTrafficLightCallback}
-     * with the same object.
      *
      * @param ioT3IntersectionCallback the unified callback for road geometry and traffic lights
      */
@@ -858,6 +871,8 @@ public class IoT3Mobility {
         private String mqttUsername;
         private String mqttPassword;
         private boolean mqttUseTls;
+        private MqttTransport mqttTransport = MqttTransport.TCP;
+        private String mqttWebSocketPath = null;
         private IoT3MobilityCallback ioT3MobilityCallback;
         private String telemetryScheme;
         private String telemetryHost = null; // will remain null if not initialized
@@ -899,6 +914,36 @@ public class IoT3Mobility {
             this.mqttUsername = mqttUsername;
             this.mqttPassword = mqttPassword;
             this.mqttUseTls = mqttUseTls;
+            this.mqttTransport = MqttTransport.TCP;
+            this.mqttWebSocketPath = null;
+            return this;
+        }
+
+        /**
+         * Set the MQTT parameters of your IoT3Mobility instance, using MQTT over WebSocket
+         * instead of a classic TCP socket (e.g. for web apps).
+         *
+         * @param mqttHost the host or IP address of the MQTT broker
+         * @param mqttPort the port of the MQTT broker
+         * @param mqttWebSocketPath the WebSocket server path (e.g. "mqtt" or "/mqtt"),
+         *                          {@value MqttTransport#DEFAULT_WEBSOCKET_PATH} if null or empty
+         * @param mqttUsername the username for authentication with the MQTT broker
+         * @param mqttPassword the password for authentication with the MQTT broker
+         * @param mqttUseTls use TLS (wss) for a secure connection with the MQTT broker
+         */
+        public IoT3Mobility.IoT3MobilityBuilder mqttWebSocketParams(String mqttHost,
+                                                                    int mqttPort,
+                                                                    String mqttWebSocketPath,
+                                                                    String mqttUsername,
+                                                                    String mqttPassword,
+                                                                    boolean mqttUseTls) {
+            this.mqttHost = mqttHost;
+            this.mqttPort = mqttPort;
+            this.mqttUsername = mqttUsername;
+            this.mqttPassword = mqttPassword;
+            this.mqttUseTls = mqttUseTls;
+            this.mqttTransport = MqttTransport.WEBSOCKET;
+            this.mqttWebSocketPath = mqttWebSocketPath;
             return this;
         }
 
@@ -941,12 +986,34 @@ public class IoT3Mobility {
          */
         public IoT3Mobility.IoT3MobilityBuilder bootstrapConfig(BootstrapConfig bootstrapConfig,
                                                                 boolean enableTelemetry) {
-            URI mqttUri = bootstrapConfig.getServiceUri(BootstrapConfig.Service.MQTT);
+            return bootstrapConfig(bootstrapConfig, enableTelemetry, false);
+        }
+
+        /**
+         * Same as {@link #bootstrapConfig(BootstrapConfig, boolean)}, with the choice of the MQTT transport.
+         *
+         * @param bootstrapConfig the bootstrap configuration object
+         * @param enableTelemetry enable telemetry for performance measurements
+         * @param useWebSocket true to use MQTT over WebSocket, false for a classic TCP socket
+         * @throws IllegalStateException if the bootstrap configuration has no URI for the chosen MQTT transport
+         */
+        public IoT3Mobility.IoT3MobilityBuilder bootstrapConfig(BootstrapConfig bootstrapConfig,
+                                                                boolean enableTelemetry,
+                                                                boolean useWebSocket) {
+            BootstrapConfig.Service mqttService = useWebSocket
+                    ? BootstrapConfig.Service.MQTT_WEBSOCKET
+                    : BootstrapConfig.Service.MQTT;
+            URI mqttUri = bootstrapConfig.getServiceUri(mqttService);
+            if(mqttUri == null) {
+                throw new IllegalStateException("No " + mqttService + " URI available in the bootstrap configuration");
+            }
             this.mqttHost = mqttUri.getHost();
             this.mqttPort = mqttUri.getPort();
             this.mqttUsername = bootstrapConfig.getPskRunLogin();
             this.mqttPassword = bootstrapConfig.getPskRunPassword();
-            this.mqttUseTls = bootstrapConfig.isServiceSecured(BootstrapConfig.Service.MQTT);
+            this.mqttUseTls = bootstrapConfig.isServiceSecured(mqttService);
+            this.mqttTransport = useWebSocket ? MqttTransport.WEBSOCKET : MqttTransport.TCP;
+            this.mqttWebSocketPath = useWebSocket ? mqttUri.getPath() : null;
             if(enableTelemetry) {
                 URI telemetryUri = bootstrapConfig.getServiceUri(BootstrapConfig.Service.OPEN_TELEMETRY);
                 this.telemetryScheme = telemetryUri.getScheme();
@@ -1014,6 +1081,8 @@ public class IoT3Mobility {
                     mqttUsername,
                     mqttPassword,
                     mqttUseTls,
+                    mqttTransport,
+                    mqttWebSocketPath,
                     ioT3MobilityCallback,
                     telemetryScheme,
                     telemetryHost,
