@@ -26,10 +26,10 @@ dependencies {
     // used instead of the JDK HttpClient sender because java.net.http.HttpClient is not available
     // on Android.
     implementation "com.squareup.okhttp3:okhttp:5.3.2"
-    implementation 'io.opentelemetry:opentelemetry-api:1.62.0'
-    implementation 'io.opentelemetry:opentelemetry-sdk:1.62.0'
-    implementation 'io.opentelemetry:opentelemetry-exporter-otlp:1.62.0'
-    implementation 'io.opentelemetry:opentelemetry-context:1.62.0'
+    implementation 'io.opentelemetry:opentelemetry-api:1.67.0'
+    implementation 'io.opentelemetry:opentelemetry-sdk:1.67.0'
+    implementation 'io.opentelemetry:opentelemetry-exporter-otlp:1.67.0'
+    implementation 'io.opentelemetry:opentelemetry-context:1.67.0'
     implementation 'org.json:json:20240303'
 
     implementation 'org.eclipse.leshan:leshan-core:2.0.0-M15'
