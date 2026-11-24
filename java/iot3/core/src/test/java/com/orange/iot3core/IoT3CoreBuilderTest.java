@@ -50,6 +50,17 @@ class IoT3CoreBuilderTest {
         );
     }
 
+    // ── mqttWebSocketParams null-guard ────────────────────────────────────────
+
+    @Test
+    @DisplayName("mqttWebSocketParams(null host, …) throws IllegalArgumentException")
+    void mqttWebSocketParams_nullHost_throwsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new IoT3Core.IoT3CoreBuilder()
+                        .mqttWebSocketParams(null, 443, "mqtt", "user", "pass", "clientId", true)
+        );
+    }
+
     // ── telemetryParams null-guard ────────────────────────────────────────────
 
     @Test
@@ -178,5 +189,17 @@ class IoT3CoreBuilderTest {
         // No mqttHost → no client created, should be safe
         assertDoesNotThrow(() -> new IoT3Core.IoT3CoreBuilder().build());
     }
-}
 
+    // ── MqttTransport ─────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("MqttTransport.fromValue resolves known values and rejects unknown ones")
+    void mqttTransport_fromValue() {
+        assertEquals(com.orange.iot3core.clients.MqttTransport.TCP,
+                com.orange.iot3core.clients.MqttTransport.fromValue("tcp"));
+        assertEquals(com.orange.iot3core.clients.MqttTransport.WEBSOCKET,
+                com.orange.iot3core.clients.MqttTransport.fromValue("WebSocket"));
+        assertThrows(IllegalArgumentException.class, () ->
+                com.orange.iot3core.clients.MqttTransport.fromValue("udp"));
+    }
+}

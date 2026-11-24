@@ -13,6 +13,7 @@ package com.orange.iot3core;
 import com.orange.iot3core.bootstrap.BootstrapConfig;
 import com.orange.iot3core.clients.MqttCallback;
 import com.orange.iot3core.clients.MqttClient;
+import com.orange.iot3core.clients.MqttTransport;
 import com.orange.iot3core.clients.OpenTelemetryClient;
 import com.orange.iot3core.clients.lwm2m.Lwm2mClient;
 import com.orange.iot3core.clients.lwm2m.model.Lwm2mConfig;
@@ -46,6 +47,8 @@ public class IoT3Core {
      * @param mqttClientId unique MQTT client ID
      * @param mqttUseTls use TLS for a secure connection with the MQTT broker
      * @param mqttKeepAlive keepAlive of the MQTT session - time it takes for noticing the disconnected state
+     * @param mqttTransport transport layer of the MQTT connection (TCP or WebSocket)
+     * @param mqttWebSocketPath server path for WebSocket transport (ignored for TCP)
      * @param ioT3CoreCallback interface to retrieve the different clients outputs
      * @param telemetryScheme Open Telemetry scheme (HTTP, HTTPS...)
      * @param telemetryHost Open Telemetry server address
@@ -61,6 +64,8 @@ public class IoT3Core {
                     String mqttClientId,
                     boolean mqttUseTls,
                     int mqttKeepAlive,
+                    MqttTransport mqttTransport,
+                    String mqttWebSocketPath,
                     IoT3CoreCallback ioT3CoreCallback,
                     String telemetryScheme,
                     String telemetryHost,
@@ -93,6 +98,8 @@ public class IoT3Core {
                     mqttClientId,
                     mqttUseTls,
                     mqttKeepAlive,
+                    mqttTransport,
+                    mqttWebSocketPath,
                     new MqttCallback() {
                         @Override
                         public void connectionLost(Throwable cause) {
@@ -240,6 +247,8 @@ public class IoT3Core {
         private String mqttClientId;
         private boolean mqttUseTls;
         private int mqttKeepAlive = 60;
+        private MqttTransport mqttTransport = MqttTransport.TCP;
+        private String mqttWebSocketPath = null;
         private IoT3CoreCallback ioT3CoreCallback;
         private String telemetryScheme;
         private String telemetryHost = null; // will remain null if not initialized
@@ -279,6 +288,40 @@ public class IoT3Core {
             this.mqttPassword = mqttPassword;
             this.mqttClientId = mqttClientId;
             this.mqttUseTls = mqttUseTls;
+            this.mqttTransport = MqttTransport.TCP;
+            this.mqttWebSocketPath = null;
+            return this;
+        }
+
+        /**
+         * Set the MQTT parameters of your IoT3Core instance, using MQTT over WebSocket
+         * instead of a classic TCP socket.
+         *
+         * @param mqttHost the host or IP address of the MQTT broker, must not be null
+         * @param mqttPort the port of the MQTT broker
+         * @param mqttWebSocketPath the WebSocket server path (e.g. "mqtt" or "/mqtt"),
+         *                          {@value MqttTransport#DEFAULT_WEBSOCKET_PATH} if null or empty
+         * @param mqttUsername the username for authentication with the MQTT broker
+         * @param mqttPassword the password for authentication with the MQTT broker
+         * @param mqttClientId your client ID
+         * @param mqttUseTls use TLS (wss) for a secure connection with the MQTT broker
+         */
+        public IoT3CoreBuilder mqttWebSocketParams(String mqttHost,
+                                                   int mqttPort,
+                                                   String mqttWebSocketPath,
+                                                   String mqttUsername,
+                                                   String mqttPassword,
+                                                   String mqttClientId,
+                                                   boolean mqttUseTls) {
+            if(mqttHost == null) throw new IllegalArgumentException("mqttHost cannot be null");
+            this.mqttHost = mqttHost;
+            this.mqttPort = mqttPort;
+            this.mqttUsername = mqttUsername;
+            this.mqttPassword = mqttPassword;
+            this.mqttClientId = mqttClientId;
+            this.mqttUseTls = mqttUseTls;
+            this.mqttTransport = MqttTransport.WEBSOCKET;
+            this.mqttWebSocketPath = mqttWebSocketPath;
             return this;
         }
 
@@ -370,13 +413,34 @@ public class IoT3Core {
          * {@link com.orange.iot3core.bootstrap.BootstrapHelper} bootstrap sequence
          */
         public IoT3CoreBuilder bootstrapConfig(BootstrapConfig bootstrapConfig) {
-            URI mqttUri = bootstrapConfig.getServiceUri(BootstrapConfig.Service.MQTT);
+            return bootstrapConfig(bootstrapConfig, false);
+        }
+
+        /**
+         * Automatically set the MQTT and OpenTelemetry parameters of your IoT3Core instance with parameters from
+         * the bootstrap configuration, choosing the MQTT transport.
+         *
+         * @param bootstrapConfig the bootstrap configuration object you get from the
+         * {@link com.orange.iot3core.bootstrap.BootstrapHelper} bootstrap sequence
+         * @param useWebSocket true to use MQTT over WebSocket, false for a classic TCP socket
+         * @throws IllegalStateException if the bootstrap configuration has no URI for the chosen MQTT transport
+         */
+        public IoT3CoreBuilder bootstrapConfig(BootstrapConfig bootstrapConfig, boolean useWebSocket) {
+            BootstrapConfig.Service mqttService = useWebSocket
+                    ? BootstrapConfig.Service.MQTT_WEBSOCKET
+                    : BootstrapConfig.Service.MQTT;
+            URI mqttUri = bootstrapConfig.getServiceUri(mqttService);
+            if(mqttUri == null) {
+                throw new IllegalStateException("No " + mqttService + " URI available in the bootstrap configuration");
+            }
             this.mqttHost = mqttUri.getHost();
             this.mqttPort = mqttUri.getPort();
             this.mqttUsername = bootstrapConfig.getPskRunLogin();
             this.mqttPassword = bootstrapConfig.getPskRunPassword();
             this.mqttClientId = bootstrapConfig.getIot3Id();
-            this.mqttUseTls = bootstrapConfig.isServiceSecured(BootstrapConfig.Service.MQTT);
+            this.mqttUseTls = bootstrapConfig.isServiceSecured(mqttService);
+            this.mqttTransport = useWebSocket ? MqttTransport.WEBSOCKET : MqttTransport.TCP;
+            this.mqttWebSocketPath = useWebSocket ? mqttUri.getPath() : null;
             URI telemetryUri = bootstrapConfig.getServiceUri(BootstrapConfig.Service.OPEN_TELEMETRY);
             this.telemetryScheme = telemetryUri.getScheme();
             this.telemetryHost = telemetryUri.getHost();
@@ -401,6 +465,8 @@ public class IoT3Core {
                     mqttClientId,
                     mqttUseTls,
                     mqttKeepAlive,
+                    mqttTransport,
+                    mqttWebSocketPath,
                     ioT3CoreCallback,
                     telemetryScheme,
                     telemetryHost,

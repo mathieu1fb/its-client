@@ -77,6 +77,21 @@ public class MqttClient {
                       int keepAlive,
                       MqttCallback callback,
                       OpenTelemetryClient openTelemetryClient) {
+        this(serverHost, serverPort, username, password, clientId, useTls, keepAlive,
+                MqttTransport.TCP, null, callback, openTelemetryClient);
+    }
+
+    public MqttClient(String serverHost,
+                      int serverPort,
+                      String username,
+                      String password,
+                      String clientId,
+                      boolean useTls,
+                      int keepAlive,
+                      MqttTransport transport,
+                      String webSocketPath,
+                      MqttCallback callback,
+                      OpenTelemetryClient openTelemetryClient) {
         this.callback = callback;
         this.openTelemetryClient = openTelemetryClient;
 
@@ -123,6 +138,17 @@ public class MqttClient {
                     .username(username)
                     .password(password.getBytes())
                     .applySimpleAuth();
+        }
+
+        if(transport == MqttTransport.WEBSOCKET) {
+            String path = (webSocketPath == null || webSocketPath.isBlank())
+                    ? MqttTransport.DEFAULT_WEBSOCKET_PATH
+                    : webSocketPath;
+            // HiveMQ expects the server path without leading slash
+            if(path.startsWith("/")) path = path.substring(1);
+            mqttClientBuilder.webSocketConfig()
+                    .serverPath(path)
+                    .applyWebSocketConfig();
         }
 
         if(useTls) {
